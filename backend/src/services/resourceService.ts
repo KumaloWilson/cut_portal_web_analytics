@@ -1,20 +1,17 @@
 import { supabase } from "../configs/supabase";
 
-
-export class UserService {
-    // Get users with pagination and filtering
-    async getUsers(page: number, limit: number, filters: any): Promise<{ users: any[]; total: number }> {
-        let query = supabase.from("users").select("*", { count: "exact" })
+export class ResourceService {
+    // Get resources with pagination and filtering
+    async getResources(page: number, limit: number, filters: any): Promise<{ resources: any[]; total: number }> {
+        let query = supabase.from("resources").select("*", { count: "exact" })
 
         // Apply filters
-        if (filters.search) {
-            query = query.or(
-                `user_id.ilike.%${filters.search}%,email.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%`,
-            )
+        if (filters.courseId) {
+            query = query.eq("course_id", filters.courseId)
         }
 
-        if (filters.role) {
-            query = query.eq("role", filters.role)
+        if (filters.type) {
+            query = query.eq("type", filters.type)
         }
 
         // Apply pagination
@@ -26,104 +23,89 @@ export class UserService {
         const { data, error, count } = await query
 
         if (error) {
-            console.error("Error getting users:", error)
+            console.error("Error getting resources:", error)
             throw error
         }
 
         return {
-            users: data || [],
+            resources: data || [],
             total: count || 0,
         }
     }
 
-    // Get a user by ID
-    async getUserById(userId: string): Promise<any> {
-        const { data, error } = await supabase.from("users").select("*").eq("user_id", userId).single()
+    // Get a resource by ID
+    async getResourceById(resourceId: string): Promise<any> {
+        const { data, error } = await supabase.from("resources").select("*").eq("resource_id", resourceId).single()
 
         if (error) {
-            console.error("Error getting user by ID:", error)
+            console.error("Error getting resource by ID:", error)
             throw error
         }
 
         return data
     }
 
-    // Create a user
-    async createUser(user: any): Promise<any> {
-        const { data, error } = await supabase.from("users").insert([user]).select()
+    // Create a resource
+    async createResource(resource: any): Promise<any> {
+        const { data, error } = await supabase.from("resources").insert([resource]).select()
 
         if (error) {
-            console.error("Error creating user:", error)
+            console.error("Error creating resource:", error)
             throw error
         }
 
         return data?.[0]
     }
 
-    // Update a user
-    async updateUser(userId: string, userData: any): Promise<any> {
-        const { data, error } = await supabase.from("users").update(userData).eq("user_id", userId).select()
+    // Update a resource
+    async updateResource(resourceId: string, resourceData: any): Promise<any> {
+        const { data, error } = await supabase.from("resources").update(resourceData).eq("resource_id", resourceId).select()
 
         if (error) {
-            console.error("Error updating user:", error)
+            console.error("Error updating resource:", error)
             throw error
         }
 
         return data?.[0]
     }
 
-    // Delete a user
-    async deleteUser(userId: string): Promise<boolean> {
-        const { error } = await supabase.from("users").delete().eq("user_id", userId)
+    // Delete a resource
+    async deleteResource(resourceId: string): Promise<boolean> {
+        const { error } = await supabase.from("resources").delete().eq("resource_id", resourceId)
 
         if (error) {
-            console.error("Error deleting user:", error)
+            console.error("Error deleting resource:", error)
             throw error
         }
 
         return true
     }
 
-    // Get user activity
-    async getUserActivity(userId: string, days: number): Promise<any> {
-        const { data, error } = await supabase.rpc("get_user_activity_stats", {
-            user_id_param: userId,
-            days_back: days,
-        })
+    // Get resource interactions
+    async getResourceInteractions(
+        resourceId: string,
+        page: number,
+        limit: number,
+    ): Promise<{ interactions: any[]; total: number }> {
+        const from = (page - 1) * limit
+        const to = from + limit - 1
+
+        const { data, error, count } = await supabase
+            .from("resource_interactions")
+            .select("*", { count: "exact" })
+            .eq("resource_id", resourceId)
+            .range(from, to)
+            .order("timestamp", { ascending: false })
 
         if (error) {
-            console.error("Error getting user activity:", error)
+            console.error("Error getting resource interactions:", error)
             throw error
         }
 
-        return data || []
-    }
-
-    // Get user courses
-    async getUserCourses(userId: string): Promise<any[]> {
-        const { data, error } = await supabase
-            .from("course_enrollments")
-            .select(`
-        role,
-        enrolled_at,
-        last_accessed_at,
-        courses:course_id(
-          course_id,
-          title,
-          description,
-          instructor_id,
-          created_at,
-          metadata
-        )
-      `)
-            .eq("user_id", userId)
-
-        if (error) {
-            console.error("Error getting user courses:", error)
-            throw error
+        return {
+            interactions: data || [],
+            total: count || 0,
         }
-
-        return data || []
     }
 }
 

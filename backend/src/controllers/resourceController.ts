@@ -1,8 +1,9 @@
 import type { Request, Response } from "express"
 import { ResourceService } from "../services/resourceService"
 
+
 export class ResourceController {
-    private resourceService: ResourceService
+    private readonly resourceService: ResourceService
 
     constructor() {
         this.resourceService = new ResourceService()

@@ -1,8 +1,9 @@
 import type { Request, Response } from "express"
 import { QuizService } from "../services/quizService"
 
+
 export class QuizController {
-    private quizService: QuizService
+    private readonly quizService: QuizService
 
     constructor() {
         this.quizService = new QuizService()

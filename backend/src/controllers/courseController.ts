@@ -2,7 +2,7 @@ import type { Request, Response } from "express"
 import { CourseService } from "../services/courseService"
 
 export class CourseController {
-    private courseService: CourseService
+    private readonly courseService: CourseService
 
     constructor() {
         this.courseService = new CourseService()

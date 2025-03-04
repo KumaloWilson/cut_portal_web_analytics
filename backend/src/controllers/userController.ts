@@ -2,7 +2,7 @@ import type { Request, Response } from "express"
 import { UserService } from "../services/userService"
 
 export class UserController {
-    private userService: UserService
+    private readonly userService: UserService
 
     constructor() {
         this.userService = new UserService()

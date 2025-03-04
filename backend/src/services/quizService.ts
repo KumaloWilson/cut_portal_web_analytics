@@ -1,6 +1,5 @@
 import { supabase } from "../configs/supabase";
 
-
 export class QuizService {
     // Get quizzes with pagination and filtering
     async getQuizzes(page: number, limit: number, filters: any): Promise<{ quizzes: any[]; total: number }> {

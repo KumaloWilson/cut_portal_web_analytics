@@ -1,5 +1,6 @@
 import { supabase } from "../configs/supabase";
-import type { TrackingEvent } from "../types/events"
+import { TrackingEvent } from "../types/events";
+
 
 export class EventService {
     // Create a single event

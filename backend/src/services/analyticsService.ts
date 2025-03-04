@@ -2,7 +2,7 @@ import { EventService } from "./eventService"
 import { EventType } from "../types/events"
 
 export class AnalyticsService {
-    private eventService: EventService
+    private readonly eventService: EventService
 
     constructor() {
         this.eventService = new EventService()

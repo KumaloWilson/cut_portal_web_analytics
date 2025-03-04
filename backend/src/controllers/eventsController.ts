@@ -3,7 +3,7 @@ import { EventService } from "../services/eventService"
 import { io } from "../index"
 
 export class EventController {
-    private eventService: EventService
+    private readonly eventService: EventService
 
     constructor() {
         this.eventService = new EventService()

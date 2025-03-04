@@ -2,7 +2,7 @@ import type { Request, Response } from "express"
 import { StatsService } from "../services/statsService"
 
 export class StatsController {
-    private statsService: StatsService
+    private readonly statsService: StatsService
 
     constructor() {
         this.statsService = new StatsService()

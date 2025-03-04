@@ -1,0 +1,135 @@
+.popup-container {
+    width: 320px;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+}
+
+.popup-header {
+    background-color: #4a6da7;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px 8px 0 0;
+}
+
+.popup-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.popup-content {
+    padding: 16px;
+}
+
+.status-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.status-dot.active {
+    background-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.status-dot.inactive {
+    background-color: #f44336;
+    box-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
+}
+
+.status-text {
+    font-weight: 500;
+}
+
+.toggle-button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toggle-button.active {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+.toggle-button.inactive {
+    background-color: #4a6da7;
+    color: white;
+}
+
+.user-section {
+    margin-bottom: 16px;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.user-info {
+    margin: 0;
+    font-size: 14px;
+}
+
+.stats-section {
+    margin-bottom: 16px;
+}
+
+.stats-section h2 {
+    font-size: 16px;
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.stat-label {
+    font-weight: 500;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #4a6da7;
+}
+
+.popup-footer {
+    padding: 12px 16px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+    border-radius: 0 0 8px 8px;
+}
+
+.dashboard-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4a6da7;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dashboard-button:hover {
+    background-color: #3a5d97;
+}

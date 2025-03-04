@@ -1,35 +1,45 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import type React from "react"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { Toaster } from "react-hot-toast"
+import { QueryClient, QueryClientProvider } from "react-query"
+import { SocketProvider } from "./contexts/SocketContext"
+import Dashboard from "./pages/Dashboard"
+import EventsPage from "./pages/EventsPage"
+import UsersPage from "./pages/UsersPage"
+import SettingsPage from "./pages/SettingsPage"
+import Layout from "./components/Layout"
+import "./App.css"
 
-function App() {
-  const [count, setCount] = useState(0)
+// Create a client for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+})
 
+const App: React.FC = () => {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <QueryClientProvider client={queryClient}>
+      <SocketProvider>
+        <Router>
+          <Toaster position="top-right" />
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </Router>
+      </SocketProvider>
+    </QueryClientProvider>
   )
 }
 
 export default App
+

@@ -1,23 +1,17 @@
 {
-  "name": "extension",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Chrome extension for tracking CUT eLearning portal interactions",
   "scripts": {
-    "build": "webpack --config webpack.config.js",
-    "watch": "webpack --watch --config webpack.config.js",
-    "lint": "eslint . --ext .ts,.tsx"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@types/chrome": "^0.0.307",
-    "copy-webpack-plugin": "^13.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.2",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

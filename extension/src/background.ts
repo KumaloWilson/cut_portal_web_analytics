@@ -18,7 +18,18 @@ class BackgroundService {
         // Listen for messages from content script
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === "trackEvent") {
+                // Add IP address if available
+                if (sender.tab && sender.tab.id) {
+                    message.event.ipAddress = sender.tab.incognito ? null : sender.tab.url?.split('/')[2] || null
+                }
+
                 this.queueEvent(message.event)
+                sendResponse({ success: true })
+            } else if (message.action === "updateUserInfo") {
+                this.updateUserInfo(message.userId, message.userInfo)
+                sendResponse({ success: true })
+            } else if (message.action === "updateCourseInfo") {
+                this.updateCourseInfo(message.courseId, message.courseInfo)
                 sendResponse({ success: true })
             }
             return true // Keep the message channel open for async response
@@ -81,8 +92,23 @@ class BackgroundService {
             this.isSending = false
         }
     }
-}
 
-// Initialize the background service
-const backgroundService = new BackgroundService()
+    private async updateUserInfo(userId: string, userInfo: any): Promise<void> {
+        try {
+            const response = await fetch(`${this.API_URL}/users/${userId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(userInfo),
+            })
+
+            if (!response.ok) {
+                console.error("Failed to update user info:", response.statusText)
+            }
+        } catch (error) {
+            console.error("Error updating user info:", error)
+        }
+    }
+}
 

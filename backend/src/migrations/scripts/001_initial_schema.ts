@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 export async function up(supabase: SupabaseClient) {
     // Create users table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id TEXT NOT NULL UNIQUE,
@@ -14,10 +16,13 @@ export async function up(supabase: SupabaseClient) {
       last_active_at TIMESTAMPTZ,
       metadata JSONB
     );
-  `)
+  `,
+    )
 
     // Create events table with expanded fields
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS events (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       event_type TEXT NOT NULL,
@@ -34,10 +39,13 @@ export async function up(supabase: SupabaseClient) {
       duration INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-  `)
+  `,
+    )
 
     // Create sessions table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS sessions (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       session_id TEXT NOT NULL UNIQUE,
@@ -50,10 +58,13 @@ export async function up(supabase: SupabaseClient) {
       ip_address TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-  `)
+  `,
+    )
 
     // Create courses table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS courses (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       course_id TEXT NOT NULL UNIQUE,
@@ -63,10 +74,13 @@ export async function up(supabase: SupabaseClient) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       metadata JSONB
     );
-  `)
+  `,
+    )
 
     // Create course_enrollments table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS course_enrollments (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       course_id TEXT REFERENCES courses(course_id),
@@ -76,10 +90,13 @@ export async function up(supabase: SupabaseClient) {
       last_accessed_at TIMESTAMPTZ,
       UNIQUE(course_id, user_id)
     );
-  `)
+  `,
+    )
 
     // Create resources table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS resources (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       resource_id TEXT NOT NULL UNIQUE,
@@ -90,10 +107,13 @@ export async function up(supabase: SupabaseClient) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       metadata JSONB
     );
-  `)
+  `,
+    )
 
     // Create resource_interactions table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS resource_interactions (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       resource_id TEXT REFERENCES resources(resource_id),
@@ -104,10 +124,13 @@ export async function up(supabase: SupabaseClient) {
       details JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-  `)
+  `,
+    )
 
     // Create quizzes table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS quizzes (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       quiz_id TEXT NOT NULL UNIQUE,
@@ -117,10 +140,13 @@ export async function up(supabase: SupabaseClient) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       metadata JSONB
     );
-  `)
+  `,
+    )
 
     // Create quiz_attempts table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS quiz_attempts (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       quiz_id TEXT REFERENCES quizzes(quiz_id),
@@ -133,10 +159,13 @@ export async function up(supabase: SupabaseClient) {
       details JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-  `)
+  `,
+    )
 
     // Create analytics_cache table for storing pre-computed analytics
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE TABLE IF NOT EXISTS analytics_cache (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       cache_key TEXT NOT NULL UNIQUE,
@@ -144,10 +173,13 @@ export async function up(supabase: SupabaseClient) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       expires_at TIMESTAMPTZ
     );
-  `)
+  `,
+    )
 
     // Create indexes for performance
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
     CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
     CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
@@ -159,22 +191,30 @@ export async function up(supabase: SupabaseClient) {
     CREATE INDEX IF NOT EXISTS idx_resource_interactions_resource_id ON resource_interactions(resource_id);
     CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_id ON quiz_attempts(user_id);
     CREATE INDEX IF NOT EXISTS idx_quiz_attempts_quiz_id ON quiz_attempts(quiz_id);
-  `)
+  `,
+    )
 }
 
 export async function down(supabase: SupabaseClient) {
     // Drop tables in reverse order to avoid foreign key constraints
-    await supabase.query(`
-    DROP TABLE IF EXISTS analytics_cache;
-    DROP TABLE IF EXISTS quiz_attempts;
-    DROP TABLE IF EXISTS quizzes;
-    DROP TABLE IF EXISTS resource_interactions;
-    DROP TABLE IF EXISTS resources;
-    DROP TABLE IF EXISTS course_enrollments;
-    DROP TABLE IF EXISTS courses;
-    DROP TABLE IF EXISTS events;
-    DROP TABLE IF EXISTS sessions;
-    DROP TABLE IF EXISTS users;
-  `)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS analytics_cache;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS quiz_attempts;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS quizzes;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS resource_interactions;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS resources;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS course_enrollments;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS courses;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS events;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS sessions;`)
+    await executeSQL(supabase, `DROP TABLE IF EXISTS users;`)
+}
+
+// Helper function to execute SQL with Supabase
+async function executeSQL(supabase: SupabaseClient, sql: string) {
+    const { error } = await supabase.rpc("run_sql", { sql_query: sql })
+    if (error) {
+        console.error("SQL execution error:", error)
+        throw error
+    }
 }
 

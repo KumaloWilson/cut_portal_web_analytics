@@ -1,8 +1,9 @@
-import { supabase } from "../supabase"
+
 import fs from "fs"
 import path from "path"
 import { createClient } from "@supabase/supabase-js"
 import dotenv from "dotenv"
+import { supabase } from "../configs/supabase"
 
 dotenv.config()
 
@@ -69,6 +70,7 @@ export async function runMigrations() {
     console.log("All migrations completed successfully.")
 }
 
+// Update the ensureMigrationsTable function to use the correct Supabase API
 async function ensureMigrationsTable() {
     // Connect with admin privileges to create tables if needed
     const supabaseAdmin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!, {
@@ -78,37 +80,34 @@ async function ensureMigrationsTable() {
         },
     })
 
-    // Check if migrations table exists
-    const { data, error } = await supabaseAdmin.rpc("check_table_exists", {
-        table_name: MIGRATIONS_TABLE,
-    })
+    try {
+        // Check if migrations table exists using from().select()
+        const { data, error } = await supabaseAdmin.from(MIGRATIONS_TABLE).select("count").limit(1)
 
-    if (error) {
-        // If RPC doesn't exist, we'll create the table directly
-        const { error: createError } = await supabaseAdmin.rpc("create_migrations_table")
-
-        if (createError) {
-            // If RPC doesn't exist, create the table with raw SQL
-            await supabaseAdmin
-                .from("migrations")
-                .select("count")
-                .limit(1)
-                .catch(async () => {
-                    // Table doesn't exist, create it
-                    const { error: tableError } = await supabaseAdmin.query(`
-          CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          );
-        `)
-
-                    if (tableError) {
-                        console.error("Error creating migrations table:", tableError)
-                        throw tableError
-                    }
+        if (error) {
+            // Table doesn't exist, create it
+            const { error: createError } = await supabaseAdmin
+                .from(MIGRATIONS_TABLE)
+                .insert({
+                    id: 1,
+                    name: "init",
+                    executed_at: new Date().toISOString(),
                 })
+                .select()
+
+            if (createError && createError.code === "42P01") {
+                // If error is "relation does not exist", create the table using rpc
+                const { error: rpcError } = await supabaseAdmin.rpc("create_migrations_table")
+
+                if (rpcError) {
+                    console.error("Error creating migrations table:", rpcError)
+                    throw rpcError
+                }
+            }
         }
+    } catch (err) {
+        console.error("Error checking migrations table:", err)
+        throw err
     }
 }
 

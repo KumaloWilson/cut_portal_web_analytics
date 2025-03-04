@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 export async function up(supabase: SupabaseClient) {
     // Function to check if a table exists
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE OR REPLACE FUNCTION check_table_exists(table_name TEXT)
     RETURNS BOOLEAN AS $$
     DECLARE
@@ -17,10 +19,13 @@ export async function up(supabase: SupabaseClient) {
       RETURN table_exists;
     END;
     $$ LANGUAGE plpgsql;
-  `)
+  `,
+    )
 
     // Function to create migrations table
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE OR REPLACE FUNCTION create_migrations_table()
     RETURNS VOID AS $$
     BEGIN
@@ -31,10 +36,13 @@ export async function up(supabase: SupabaseClient) {
       );
     END;
     $$ LANGUAGE plpgsql;
-  `)
+  `,
+    )
 
     // Function to get user activity stats
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE OR REPLACE FUNCTION get_user_activity_stats(user_id_param TEXT, days_back INTEGER DEFAULT 30)
     RETURNS TABLE (
       day DATE,
@@ -60,10 +68,13 @@ export async function up(supabase: SupabaseClient) {
       ORDER BY day;
     END;
     $$ LANGUAGE plpgsql;
-  `)
+  `,
+    )
 
     // Function to get course activity stats
-    await supabase.query(`
+    await executeSQL(
+        supabase,
+        `
     CREATE OR REPLACE FUNCTION get_course_activity_stats(course_id_param TEXT, days_back INTEGER DEFAULT 30)
     RETURNS TABLE (
       day DATE,
@@ -88,16 +99,38 @@ export async function up(supabase: SupabaseClient) {
       ORDER BY day;
     END;
     $$ LANGUAGE plpgsql;
-  `)
+  `,
+    )
+
+    // Function to run SQL queries (needed for migrations)
+    await executeSQL(
+        supabase,
+        `
+    CREATE OR REPLACE FUNCTION run_sql(sql_query TEXT)
+    RETURNS VOID AS $$
+    BEGIN
+      EXECUTE sql_query;
+    END;
+    $$ LANGUAGE plpgsql;
+  `,
+    )
 }
 
 export async function down(supabase: SupabaseClient) {
     // Drop all functions
-    await supabase.query(`
-    DROP FUNCTION IF EXISTS get_course_activity_stats;
-    DROP FUNCTION IF EXISTS get_user_activity_stats;
-    DROP FUNCTION IF EXISTS create_migrations_table;
-    DROP FUNCTION IF EXISTS check_table_exists;
-  `)
+    await executeSQL(supabase, `DROP FUNCTION IF EXISTS run_sql;`)
+    await executeSQL(supabase, `DROP FUNCTION IF EXISTS get_course_activity_stats;`)
+    await executeSQL(supabase, `DROP FUNCTION IF EXISTS get_user_activity_stats;`)
+    await executeSQL(supabase, `DROP FUNCTION IF EXISTS create_migrations_table;`)
+    await executeSQL(supabase, `DROP FUNCTION IF EXISTS check_table_exists;`)
+}
+
+// Helper function to execute SQL with Supabase
+async function executeSQL(supabase: SupabaseClient, sql: string) {
+    const { error } = await supabase.rpc("run_sql", { sql_query: sql })
+    if (error) {
+        console.error("SQL execution error:", error)
+        throw error
+    }
 }
 

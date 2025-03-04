@@ -1,114 +1,35 @@
-import { supabase } from "../supabase"
-import fs from "fs"
-import path from "path"
-import { createClient } from "@supabase/supabase-js"
-import dotenv from "dotenv"
+import { Router } from "express"
+import { CourseController } from "../controllers/courseController"
 
-dotenv.config()
+const router = Router()
+const courseController = new CourseController()
 
-// Migration metadata table to track which migrations have been run
-const MIGRATIONS_TABLE = "migrations"
+// Route to get all courses
+router.get("/", courseController.getCourses)
 
-export async function runMigrations() {
-    console.log("Starting database migrations...")
+// Route to get a course by ID
+router.get("/:courseId", courseController.getCourseById)
 
-    // Ensure migrations table exists
-    await ensureMigrationsTable()
+// Route to create a course
+router.post("/", courseController.createCourse)
 
-    // Get list of migrations that have been run
-    const { data: appliedMigrations, error } = await supabase
-        .from(MIGRATIONS_TABLE)
-        .select("name")
-        .order("executed_at", { ascending: true })
+// Route to update a course
+router.put("/:courseId", courseController.updateCourse)
 
-    if (error) {
-        console.error("Error fetching applied migrations:", error)
-        throw error
-    }
+// Route to delete a course
+router.delete("/:courseId", courseController.deleteCourse)
 
-    // Get all migration files
-    const migrationsDir = path.join(__dirname, "scripts")
-    const migrationFiles = fs
-        .readdirSync(migrationsDir)
-        .filter((file) => file.endsWith(".ts") || file.endsWith(".js"))
-        .sort() // Sort to ensure migrations run in order
+// Route to get course activity
+router.get("/:courseId/activity", courseController.getCourseActivity)
 
-    // Determine which migrations need to be run
-    const appliedMigrationNames = appliedMigrations.map((m) => m.name)
-    const pendingMigrations = migrationFiles.filter((file) => !appliedMigrationNames.includes(file))
+// Route to get course users
+router.get("/:courseId/users", courseController.getCourseUsers)
 
-    if (pendingMigrations.length === 0) {
-        console.log("No pending migrations to run.")
-        return
-    }
+// Route to get course resources
+router.get("/:courseId/resources", courseController.getCourseResources)
 
-    console.log(`Found ${pendingMigrations.length} pending migrations.`)
+// Route to get course quizzes
+router.get("/:courseId/quizzes", courseController.getCourseQuizzes)
 
-    // Run each pending migration
-    for (const migrationFile of pendingMigrations) {
-        console.log(`Running migration: ${migrationFile}`)
-
-        try {
-            // Import and run the migration
-            const migration = require(path.join(migrationsDir, migrationFile))
-            await migration.up(supabase)
-
-            // Record that the migration has been run
-            await supabase.from(MIGRATIONS_TABLE).insert({
-                name: migrationFile,
-                executed_at: new Date().toISOString(),
-            })
-
-            console.log(`Migration ${migrationFile} completed successfully.`)
-        } catch (err) {
-            console.error(`Error running migration ${migrationFile}:`, err)
-            throw err
-        }
-    }
-
-    console.log("All migrations completed successfully.")
-}
-
-async function ensureMigrationsTable() {
-    // Connect with admin privileges to create tables if needed
-    const supabaseAdmin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!, {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-        },
-    })
-
-    // Check if migrations table exists
-    const { data, error } = await supabaseAdmin.rpc("check_table_exists", {
-        table_name: MIGRATIONS_TABLE,
-    })
-
-    if (error) {
-        // If RPC doesn't exist, we'll create the table directly
-        const { error: createError } = await supabaseAdmin.rpc("create_migrations_table")
-
-        if (createError) {
-            // If RPC doesn't exist, create the table with raw SQL
-            await supabaseAdmin
-                .from("migrations")
-                .select("count")
-                .limit(1)
-                .catch(async () => {
-                    // Table doesn't exist, create it
-                    const { error: tableError } = await supabaseAdmin.query(`
-          CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          );
-        `)
-
-                    if (tableError) {
-                        console.error("Error creating migrations table:", tableError)
-                        throw tableError
-                    }
-                })
-        }
-    }
-}
+export const courseRoutes = router
 

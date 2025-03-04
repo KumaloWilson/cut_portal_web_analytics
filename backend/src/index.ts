@@ -12,21 +12,10 @@ import { resourceRoutes } from "./routes/resourceRoutes"
 import { quizRoutes } from "./routes/quizRoutes"
 import { setupSocketHandlers } from "./services/socketService"
 import { errorHandler } from "./middleware/errorHandler"
-import { runMigrations } from "./db/migrations"
+import { initializeDatabase } from "./configs/setup-db"
 
 // Load environment variables
 dotenv.config()
-
-// Run database migrations
-async function initializeDatabase() {
-    try {
-        await runMigrations()
-        console.log("Database migrations completed successfully")
-    } catch (error) {
-        console.error("Error running database migrations:", error)
-        process.exit(1)
-    }
-}
 
 // Create Express app
 const app = express()
@@ -68,11 +57,22 @@ app.use(errorHandler)
 const PORT = process.env.PORT || 3000
 
 // Initialize database and start server
-initializeDatabase().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`)
-    })
-})
+async function startServer() {
+    try {
+        // Initialize database
+        await initializeDatabase()
+
+        // Start server
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`)
+        })
+    } catch (error) {
+        console.error("Failed to start server:", error)
+        process.exit(1)
+    }
+}
+
+startServer()
 
 // Export for testing
 export { app, server, io }

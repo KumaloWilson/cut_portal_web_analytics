@@ -1,4 +1,4 @@
-import { supabase } from "../db/supabase"
+import { supabase } from "../configs/supabase";
 
 export class UserService {
     // Get users with pagination and filtering

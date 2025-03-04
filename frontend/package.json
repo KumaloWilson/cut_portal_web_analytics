@@ -23,9 +23,7 @@
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.15",
     "globals": "^15.15.0",
-    "postcss": "^8.4.28",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0"

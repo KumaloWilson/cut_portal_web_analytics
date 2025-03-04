@@ -7,7 +7,7 @@ import Dashboard from "./pages/Dashboard"
 import EventsPage from "./pages/EventsPage"
 import UsersPage from "./pages/UsersPage"
 import SettingsPage from "./pages/SettingsPage"
-import "./App.css"
+import "./index.css"
 import Layout from "./components/navigation/Layout"
 
 // Create a client for React Query
@@ -42,6 +42,7 @@ const App: React.FC = () => {
     </QueryClientProvider>
   )
 }
+
 
 export default App
 

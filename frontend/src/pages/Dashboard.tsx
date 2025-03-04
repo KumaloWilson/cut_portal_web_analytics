@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useQuery } from "react-query"
-import { useSocket } from "../contexts/SocketContext"
 import { fetchDashboardData } from "../services/api"
 import DashboardHeader from "../components/dashboard/DashboardHeader"
 import OverviewStats from "../components/dashboard/OverviewStats"
@@ -14,6 +13,7 @@ import TimeSpentChart from "../components/dashboard/TimeSpentChart"
 import DateRangePicker from "../components/common/DateRangePicker"
 import LoadingSpinner from "../components/common/LoadingSpinner"
 import ErrorDisplay from "../components/common/ErrorDisplay"
+import { useSocket } from "../contexts/SocketContext"
 
 const Dashboard: React.FC = () => {
     const socket = useSocket()

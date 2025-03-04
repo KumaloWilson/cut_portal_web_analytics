@@ -1,8 +1,9 @@
 import type React from "react"
 import { formatDistanceToNow } from "date-fns"
+import { TrackingEvent } from "../../types/events"
 
 interface EventsTableProps {
-    events: any[]
+    events: TrackingEvent[]
 }
 
 const EventsTable: React.FC<EventsTableProps> = ({ events }) => {
@@ -24,7 +25,7 @@ const EventsTable: React.FC<EventsTableProps> = ({ events }) => {
     }
 
     // Function to render event details
-    const renderEventDetails = (details: any) => {
+    const renderEventDetails = (details: unknown) => {
         if (!details) return "No details"
 
         // Convert details object to string representation
@@ -62,19 +63,19 @@ const EventsTable: React.FC<EventsTableProps> = ({ events }) => {
                             <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span
-                                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${event.event_type === "page_view"
-                                                ? "bg-blue-100 text-blue-800"
-                                                : event.event_type === "button_click"
-                                                    ? "bg-green-100 text-green-800"
-                                                    : event.event_type === "form_submit"
-                                                        ? "bg-purple-100 text-purple-800"
-                                                        : "bg-gray-100 text-gray-800"
+                                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${event.eventType === "page_view"
+                                            ? "bg-blue-100 text-blue-800"
+                                            : event.eventType === "button_click"
+                                                ? "bg-green-100 text-green-800"
+                                                : event.eventType === "form_submit"
+                                                    ? "bg-purple-100 text-purple-800"
+                                                    : "bg-gray-100 text-gray-800"
                                             }`}
                                     >
-                                        {formatEventType(event.event_type)}
+                                        {formatEventType(event.eventType)}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{event.user_id || "Anonymous"}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{event.userId || "Anonymous"}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{event.url}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                                     {renderEventDetails(event.details)}

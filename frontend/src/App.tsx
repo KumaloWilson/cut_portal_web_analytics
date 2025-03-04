@@ -2,13 +2,13 @@ import type React from "react"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import { Toaster } from "react-hot-toast"
 import { QueryClient, QueryClientProvider } from "react-query"
-import { SocketProvider } from "./contexts/SocketContext"
 import Dashboard from "./pages/Dashboard"
 import EventsPage from "./pages/EventsPage"
-import UsersPage from "./pages/UsersPage"
-import SettingsPage from "./pages/SettingsPage"
-import Layout from "./components/Layout"
 import "./App.css"
+import { Layout } from "lucide-react"
+import { SocketProvider } from "./contexts/SocketContext"
+import SettingsPage from "./pages/SettingsPage"
+import UsersPage from "./pages/UsersPage"
 
 // Create a client for React Query
 const queryClient = new QueryClient({

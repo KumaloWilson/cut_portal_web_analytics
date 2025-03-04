@@ -1,7 +1,7 @@
 import type React from "react"
 import { Outlet } from "react-router-dom"
-import Sidebar from "./navigation/Sidebar"
-import Header from "./navigation/Header"
+import Sidebar from "./Sidebar"
+import Header from "./Header"
 
 const Layout: React.FC = () => {
     return (

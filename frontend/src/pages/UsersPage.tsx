@@ -3,11 +3,11 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useQuery } from "react-query"
-import { useSocket } from "../contexts/SocketContext"
-import { fetchDashboardData } from "../services/api"
 import LoadingSpinner from "../components/common/LoadingSpinner"
 import ErrorDisplay from "../components/common/ErrorDisplay"
 import { User, Clock, BarChart2 } from "lucide-react"
+import { useSocket } from "../contexts/SocketContext"
+import { fetchDashboardData } from "../services/api"
 
 const UsersPage: React.FC = () => {
     const socket = useSocket()

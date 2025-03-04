@@ -1,9 +1,9 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
-import { Filter, X } from "lucide-react"
-import { EventType } from "../../types/events"
+import type React from "react";
+import { useState } from "react";
+import { Filter, X } from "lucide-react";
+import { EventType } from "../../types/events";
 
 interface EventsFilterProps {
     filters: {
@@ -12,7 +12,7 @@ interface EventsFilterProps {
         eventType: string
         userId: string
     }
-    onFilterChange: (filters: any) => void
+    onFilterChange: (filters: unknown) => void
 }
 
 const EventsFilter: React.FC<EventsFilterProps> = ({ filters, onFilterChange }) => {

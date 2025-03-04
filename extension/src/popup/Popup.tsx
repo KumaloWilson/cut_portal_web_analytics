@@ -1,6 +1,5 @@
 "use client"
-
-import type React from "react"
+import React from "react"
 import { useEffect, useState } from "react"
 import "./Popup.css"
 

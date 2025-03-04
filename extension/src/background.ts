@@ -20,7 +20,7 @@ class BackgroundService {
             if (message.action === "trackEvent") {
                 // Add IP address if available
                 if (sender.tab && sender.tab.id) {
-                    message.event.ipAddress = sender.tab.incognito ? null : sender.tab.url?.split('/')[2] || null
+                    message.event.ipAddress = sender.tab.incognito ? null : sender.tab.url?.split("/")[2] || null
                 }
 
                 this.queueEvent(message.event)
@@ -110,5 +110,32 @@ class BackgroundService {
             console.error("Error updating user info:", error)
         }
     }
+
+    // Complete the BackgroundService class by adding the missing updateCourseInfo method
+    private async updateCourseInfo(courseId: string, courseInfo: any): Promise<void> {
+        try {
+            const response = await fetch(`${this.API_URL}/courses/${courseId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(courseInfo),
+            })
+
+            if (!response.ok) {
+                console.error("Failed to update course info:", response.statusText)
+            }
+        } catch (error) {
+            console.error("Error updating course info:", error)
+        }
+    }
+
+    // Add at the end of the class definition
 }
+
+// Instantiate the BackgroundService class to use it
+const backgroundService = new BackgroundService()
+
+// Log that the background service has started
+console.log("CUT eLearning Analytics background service started")
 

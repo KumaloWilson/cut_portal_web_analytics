@@ -1,128 +1,182 @@
-import { supabase } from "../configs/supabase";
+import { query } from "../db/postgres"
 
 export class UserService {
-    // Get users with pagination and filtering
-    async getUsers(page: number, limit: number, filters: any): Promise<{ users: any[]; total: number }> {
-        let query = supabase.from("users").select("*", { count: "exact" })
+  // Get users with pagination and filtering
+  async getUsers(page: number, limit: number, filters: any): Promise<{ users: any[]; total: number }> {
+    let queryText = "SELECT * FROM users"
+    const queryParams: any[] = []
+    const conditions: string[] = []
+    let paramIndex = 1
 
-        // Apply filters
-        if (filters.search) {
-            query = query.or(
-                `user_id.ilike.%${filters.search}%,email.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%`,
-            )
-        }
-
-        if (filters.role) {
-            query = query.eq("role", filters.role)
-        }
-
-        // Apply pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        query = query.range(from, to).order("created_at", { ascending: false })
-
-        const { data, error, count } = await query
-
-        if (error) {
-            console.error("Error getting users:", error)
-            throw error
-        }
-
-        return {
-            users: data || [],
-            total: count || 0,
-        }
+    // Apply filters
+    if (filters.search) {
+      conditions.push(`(
+        user_id ILIKE $${paramIndex} OR 
+        email ILIKE $${paramIndex} OR 
+        first_name ILIKE $${paramIndex} OR 
+        last_name ILIKE $${paramIndex}
+      )`)
+      queryParams.push(`%${filters.search}%`)
+      paramIndex++
     }
 
-    // Get a user by ID
-    async getUserById(userId: string): Promise<any> {
-        const { data, error } = await supabase.from("users").select("*").eq("user_id", userId).single()
-
-        if (error) {
-            console.error("Error getting user by ID:", error)
-            throw error
-        }
-
-        return data
+    if (filters.role) {
+      conditions.push(`role = $${paramIndex++}`)
+      queryParams.push(filters.role)
     }
 
-    // Create a user
-    async createUser(user: any): Promise<any> {
-        const { data, error } = await supabase.from("users").insert([user]).select()
-
-        if (error) {
-            console.error("Error creating user:", error)
-            throw error
-        }
-
-        return data?.[0]
+    // Add WHERE clause if there are conditions
+    if (conditions.length > 0) {
+      queryText += " WHERE " + conditions.join(" AND ")
     }
 
-    // Update a user
-    async updateUser(userId: string, userData: any): Promise<any> {
-        const { data, error } = await supabase.from("users").update(userData).eq("user_id", userId).select()
+    // Get total count
+    const countResult = await query(`SELECT COUNT(*) FROM (${queryText}) AS count_query`, queryParams)
+    const total = Number.parseInt(countResult.rows[0].count, 10)
 
-        if (error) {
-            console.error("Error updating user:", error)
-            throw error
-        }
+    // Apply pagination
+    const offset = (page - 1) * limit
+    queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`
+    queryParams.push(limit, offset)
 
-        return data?.[0]
+    // Execute the query
+    const result = await query(queryText, queryParams)
+
+    return {
+      users: result.rows,
+      total,
+    }
+  }
+
+  // Get a user by ID
+  async getUserById(userId: string): Promise<any> {
+    const result = await query("SELECT * FROM users WHERE user_id = $1", [userId])
+
+    return result.rows[0]
+  }
+
+  // Create a user
+  async createUser(user: any): Promise<any> {
+    const result = await query(
+      `INSERT INTO users (
+        user_id, email, first_name, last_name, role, last_active_at, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      RETURNING *`,
+      [
+        user.user_id,
+        user.email,
+        user.first_name,
+        user.last_name,
+        user.role,
+        user.last_active_at || new Date(),
+        user.metadata || {},
+      ],
+    )
+
+    return result.rows[0]
+  }
+
+  // Update a user
+  async updateUser(userId: string, userData: any): Promise<any> {
+    // Build the SET clause dynamically based on provided fields
+    const updates: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+
+    if (userData.email !== undefined) {
+      updates.push(`email = $${paramIndex++}`)
+      values.push(userData.email)
     }
 
-    // Delete a user
-    async deleteUser(userId: string): Promise<boolean> {
-        const { error } = await supabase.from("users").delete().eq("user_id", userId)
-
-        if (error) {
-            console.error("Error deleting user:", error)
-            throw error
-        }
-
-        return true
+    if (userData.first_name !== undefined) {
+      updates.push(`first_name = $${paramIndex++}`)
+      values.push(userData.first_name)
     }
 
-    // Get user activity
-    async getUserActivity(userId: string, days: number): Promise<any> {
-        const { data, error } = await supabase.rpc("get_user_activity_stats", {
-            user_id_param: userId,
-            days_back: days,
-        })
-
-        if (error) {
-            console.error("Error getting user activity:", error)
-            throw error
-        }
-
-        return data || []
+    if (userData.last_name !== undefined) {
+      updates.push(`last_name = $${paramIndex++}`)
+      values.push(userData.last_name)
     }
 
-    // Get user courses
-    async getUserCourses(userId: string): Promise<any[]> {
-        const { data, error } = await supabase
-            .from("course_enrollments")
-            .select(`
-        role,
-        enrolled_at,
-        last_accessed_at,
-        courses:course_id(
-          course_id,
-          title,
-          description,
-          instructor_id,
-          created_at,
-          metadata
-        )
-      `)
-            .eq("user_id", userId)
-
-        if (error) {
-            console.error("Error getting user courses:", error)
-            throw error
-        }
-
-        return data || []
+    if (userData.role !== undefined) {
+      updates.push(`role = $${paramIndex++}`)
+      values.push(userData.role)
     }
+
+    if (userData.last_active_at !== undefined) {
+      updates.push(`last_active_at = $${paramIndex++}`)
+      values.push(userData.last_active_at)
+    }
+
+    if (userData.metadata !== undefined) {
+      updates.push(`metadata = $${paramIndex++}`)
+      values.push(userData.metadata)
+    }
+
+    // If no updates, return the existing user
+    if (updates.length === 0) {
+      return this.getUserById(userId)
+    }
+
+    // Add the userId to the values array
+    values.push(userId)
+
+    const result = await query(
+      `UPDATE users SET ${updates.join(", ")} WHERE user_id = $${paramIndex} RETURNING *`,
+      values,
+    )
+
+    return result.rows[0]
+  }
+
+  // Delete a user
+  async deleteUser(userId: string): Promise<boolean> {
+    const result = await query("DELETE FROM users WHERE user_id = $1 RETURNING *", [userId])
+
+    return result.rows.length > 0
+  }
+
+  // Get user activity
+  async getUserActivity(userId: string, days: number): Promise<any> {
+    const result = await query("SELECT * FROM get_user_activity_stats($1, $2)", [userId, days])
+
+    return result.rows
+  }
+
+  // Get user courses
+  async getUserCourses(userId: string): Promise<any[]> {
+    const result = await query(
+      `
+      SELECT 
+        ce.role,
+        ce.enrolled_at,
+        ce.last_accessed_at,
+        c.course_id,
+        c.title,
+        c.description,
+        c.instructor_id,
+        c.created_at,
+        c.metadata
+      FROM course_enrollments ce
+      JOIN courses c ON ce.course_id = c.course_id
+      WHERE ce.user_id = $1
+    `,
+      [userId],
+    )
+
+    return result.rows.map((row) => ({
+      role: row.role,
+      enrolled_at: row.enrolled_at,
+      last_accessed_at: row.last_accessed_at,
+      courses: {
+        course_id: row.course_id,
+        title: row.title,
+        description: row.description,
+        instructor_id: row.instructor_id,
+        created_at: row.created_at,
+        metadata: row.metadata,
+      },
+    }))
+  }
 }
 

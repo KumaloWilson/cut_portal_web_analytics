@@ -12,7 +12,8 @@ import { resourceRoutes } from "./routes/resourceRoutes"
 import { quizRoutes } from "./routes/quizRoutes"
 import { setupSocketHandlers } from "./services/socketService"
 import { errorHandler } from "./middleware/errorHandler"
-import { initializeDatabase } from "./configs/setup-db"
+import { initializeDatabase } from "./db/setup-db"
+import { closePool } from "./db/postgres"
 
 // Load environment variables
 dotenv.config()
@@ -23,10 +24,10 @@ const server = http.createServer(app)
 
 // Set up Socket.IO for real-time updates
 const io = new SocketIOServer(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-    },
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
 })
 
 // Middleware
@@ -47,7 +48,7 @@ app.use("/api/quizzes", quizRoutes)
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-    res.status(200).json({ status: "ok" })
+  res.status(200).json({ status: "ok" })
 })
 
 // Error handling middleware
@@ -58,18 +59,42 @@ const PORT = process.env.PORT || 3000
 
 // Initialize database and start server
 async function startServer() {
-    try {
-        // Initialize database
-        await initializeDatabase()
+  try {
+    // Initialize database
+    await initializeDatabase()
 
-        // Start server
-        server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`)
-        })
-    } catch (error) {
-        console.error("Failed to start server:", error)
-        process.exit(1)
-    }
+    // Start server
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`)
+    })
+
+    // Handle graceful shutdown
+    process.on("SIGTERM", gracefulShutdown)
+    process.on("SIGINT", gracefulShutdown)
+  } catch (error) {
+    console.error("Failed to start server:", error)
+    process.exit(1)
+  }
+}
+
+// Graceful shutdown function
+async function gracefulShutdown() {
+  console.log("Shutting down gracefully...")
+
+  // Close the HTTP server
+  server.close(() => {
+    console.log("HTTP server closed")
+  })
+
+  // Close database connections
+  try {
+    await closePool()
+    console.log("Database connections closed")
+    process.exit(0)
+  } catch (err) {
+    console.error("Error closing database connections:", err)
+    process.exit(1)
+  }
 }
 
 startServer()

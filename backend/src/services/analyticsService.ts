@@ -1,259 +1,387 @@
-import { EventService } from "./eventService"
+import { query } from "../db/postgres"
 import { EventType } from "../types/events"
 
 export class AnalyticsService {
-    private readonly eventService: EventService
+  // Get page view analytics
+  async getPageViewAnalytics(filters: any): Promise<any> {
+    const { startDate, endDate } = filters
+    const queryParams: any[] = []
+    let whereClause = ""
+    let paramIndex = 1
 
-    constructor() {
-        this.eventService = new EventService()
+    if (startDate || endDate) {
+      whereClause = "WHERE "
+
+      if (startDate) {
+        whereClause += `timestamp >= $${paramIndex++}`
+        queryParams.push(startDate)
+      }
+
+      if (endDate) {
+        if (startDate) whereClause += " AND "
+        whereClause += `timestamp <= $${paramIndex++}`
+        queryParams.push(endDate)
+      }
     }
 
-    // Get page view analytics
-    async getPageViewAnalytics(filters: any): Promise<any> {
-        const { startDate, endDate } = filters
+    // Get all page view events in the date range
+    const eventsQuery = `
+      SELECT * FROM events 
+      ${whereClause}
+      AND event_type = $${paramIndex}
+    `
+    queryParams.push(EventType.PAGE_VIEW)
 
-        // Get all page view events in the date range
-        const { events } = await this.eventService.getEvents(1, 1000, {
-            startDate,
-            endDate,
-            eventType: EventType.PAGE_VIEW,
-        })
+    const eventsResult = await query(eventsQuery, queryParams)
+    const events = eventsResult.rows
 
-        // Group page views by path
-        const pageViewsByPath: Record<string, number> = {}
+    // Group page views by path
+    const pageViewsByPath: Record<string, number> = {}
 
-        events.forEach((event) => {
-            const path = event.path
-            pageViewsByPath[path] = (pageViewsByPath[path] || 0) + 1
-        })
+    events.forEach((event) => {
+      const path = event.path
+      pageViewsByPath[path] = (pageViewsByPath[path] || 0) + 1
+    })
 
-        // Convert to array and sort by count
-        const pageViewsArray = Object.entries(pageViewsByPath).map(([path, count]) => ({
-            path,
-            count,
-        }))
+    // Convert to array and sort by count
+    const pageViewsArray = Object.entries(pageViewsByPath).map(([path, count]) => ({
+      path,
+      count,
+    }))
 
-        pageViewsArray.sort((a, b) => b.count - a.count)
+    pageViewsArray.sort((a, b) => b.count - a.count)
 
-        return {
-            totalPageViews: events.length,
-            pageViewsByPath: pageViewsArray,
-        }
+    return {
+      totalPageViews: events.length,
+      pageViewsByPath: pageViewsArray,
+    }
+  }
+
+  // Get user engagement analytics
+  async getUserEngagementAnalytics(filters: any): Promise<any> {
+    const { startDate, endDate, userId } = filters
+    const queryParams: any[] = []
+    let whereClause = ""
+    let paramIndex = 1
+
+    if (startDate || endDate || userId) {
+      whereClause = "WHERE "
+
+      if (startDate) {
+        whereClause += `timestamp >= $${paramIndex++}`
+        queryParams.push(startDate)
+      }
+
+      if (endDate) {
+        if (startDate) whereClause += " AND "
+        whereClause += `timestamp <= $${paramIndex++}`
+        queryParams.push(endDate)
+      }
+
+      if (userId) {
+        if (startDate || endDate) whereClause += " AND "
+        whereClause += `user_id = $${paramIndex++}`
+        queryParams.push(userId)
+      }
     }
 
-    // Get user engagement analytics
-    async getUserEngagementAnalytics(filters: any): Promise<any> {
-        const { startDate, endDate, userId } = filters
+    if (userId) {
+      // Get events for specific user
+      const eventsQuery = `
+        SELECT * FROM events 
+        ${whereClause}
+      `
 
-        // Get all events in the date range
-        const queryFilters: any = { startDate, endDate }
+      const eventsResult = await query(eventsQuery, queryParams)
+      const events = eventsResult.rows
 
-        if (userId) {
-            const { events } = await this.eventService.getEventsByUser(userId, 1, 1000)
+      // Calculate engagement metrics
+      const eventCounts: Record<string, number> = {}
 
-            // Calculate engagement metrics
-            const eventCounts: Record<string, number> = {}
+      events.forEach((event) => {
+        const eventType = event.event_type
+        eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
+      })
 
-            events.forEach((event) => {
-                const eventType = event.event_type
-                eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
-            })
+      return {
+        totalEvents: events.length,
+        eventCounts,
+        userId,
+      }
+    } else {
+      // Get all users and their event counts
+      const eventsQuery = `
+        SELECT * FROM events 
+        ${whereClause}
+      `
 
-            return {
-                totalEvents: events.length,
-                eventCounts,
-                userId,
-            }
-        } else {
-            // Get all users and their event counts
-            const { events } = await this.eventService.getEvents(1, 10000, queryFilters)
+      const eventsResult = await query(eventsQuery, queryParams)
+      const events = eventsResult.rows
 
-            // Group by user
-            const userEngagement: Record<string, any> = {}
+      // Group by user
+      const userEngagement: Record<string, any> = {}
 
-            events.forEach((event) => {
-                const userId = event.user_id
-                if (!userId) return
+      events.forEach((event) => {
+        const userId = event.user_id
+        if (!userId) return
 
-                if (!userEngagement[userId]) {
-                    userEngagement[userId] = {
-                        totalEvents: 0,
-                        eventCounts: {},
-                    }
-                }
-
-                userEngagement[userId].totalEvents += 1
-
-                const eventType = event.event_type
-                userEngagement[userId].eventCounts[eventType] = (userEngagement[userId].eventCounts[eventType] || 0) + 1
-            })
-
-            // Convert to array and sort by total events
-            const userEngagementArray = Object.entries(userEngagement).map(([userId, data]) => ({
-                userId,
-                ...data,
-            }))
-
-            userEngagementArray.sort((a, b) => b.totalEvents - a.totalEvents)
-
-            return {
-                totalUsers: userEngagementArray.length,
-                userEngagement: userEngagementArray,
-            }
+        if (!userEngagement[userId]) {
+          userEngagement[userId] = {
+            totalEvents: 0,
+            eventCounts: {},
+          }
         }
+
+        userEngagement[userId].totalEvents += 1
+
+        const eventType = event.event_type
+        userEngagement[userId].eventCounts[eventType] = (userEngagement[userId].eventCounts[eventType] || 0) + 1
+      })
+
+      // Convert to array and sort by total events
+      const userEngagementArray = Object.entries(userEngagement).map(([userId, data]) => ({
+        userId,
+        ...data,
+      }))
+
+      userEngagementArray.sort((a, b) => b.totalEvents - a.totalEvents)
+
+      return {
+        totalUsers: userEngagementArray.length,
+        userEngagement: userEngagementArray,
+      }
+    }
+  }
+
+  // Get resource access analytics
+  async getResourceAccessAnalytics(filters: any): Promise<any> {
+    const { startDate, endDate } = filters
+    const queryParams: any[] = []
+    let whereClause = ""
+    let paramIndex = 1
+
+    if (startDate || endDate) {
+      whereClause = "WHERE "
+
+      if (startDate) {
+        whereClause += `timestamp >= $${paramIndex++}`
+        queryParams.push(startDate)
+      }
+
+      if (endDate) {
+        if (startDate) whereClause += " AND "
+        whereClause += `timestamp <= $${paramIndex++}`
+        queryParams.push(endDate)
+      }
     }
 
-    // Get resource access analytics
-    async getResourceAccessAnalytics(filters: any): Promise<any> {
-        const { startDate, endDate } = filters
+    // Add event type filter
+    if (whereClause) {
+      whereClause += " AND "
+    } else {
+      whereClause = "WHERE "
+    }
+    whereClause += `event_type = $${paramIndex++}`
+    queryParams.push(EventType.RESOURCE_ACCESS)
 
-        // Get all resource access events in the date range
-        const { events } = await this.eventService.getEvents(1, 1000, {
-            startDate,
-            endDate,
-            eventType: EventType.RESOURCE_ACCESS,
-        })
+    // Get all resource access events in the date range
+    const eventsQuery = `
+      SELECT * FROM events 
+      ${whereClause}
+    `
 
-        // Group resource accesses by resource
-        const resourceAccessesByResource: Record<string, number> = {}
+    const eventsResult = await query(eventsQuery, queryParams)
+    const events = eventsResult.rows
 
-        events.forEach((event) => {
-            const resourceId = event.details?.resourceId || "unknown"
-            resourceAccessesByResource[resourceId] = (resourceAccessesByResource[resourceId] || 0) + 1
-        })
+    // Group resource accesses by resource
+    const resourceAccessesByResource: Record<string, number> = {}
 
-        // Convert to array and sort by count
-        const resourceAccessesArray = Object.entries(resourceAccessesByResource).map(([resourceId, count]) => ({
-            resourceId,
-            count,
-        }))
+    events.forEach((event) => {
+      const resourceId = event.details?.resourceId || "unknown"
+      resourceAccessesByResource[resourceId] = (resourceAccessesByResource[resourceId] || 0) + 1
+    })
 
-        resourceAccessesArray.sort((a, b) => b.count - a.count)
+    // Convert to array and sort by count
+    const resourceAccessesArray = Object.entries(resourceAccessesByResource).map(([resourceId, count]) => ({
+      resourceId,
+      count,
+    }))
 
-        return {
-            totalResourceAccesses: events.length,
-            resourceAccessesByResource: resourceAccessesArray,
-        }
+    resourceAccessesArray.sort((a, b) => b.count - a.count)
+
+    return {
+      totalResourceAccesses: events.length,
+      resourceAccessesByResource: resourceAccessesArray,
+    }
+  }
+
+  // Get time spent analytics
+  async getTimeSpentAnalytics(filters: any): Promise<any> {
+    const { startDate, endDate, userId } = filters
+    const queryParams: any[] = []
+    let whereClause = ""
+    let paramIndex = 1
+
+    if (startDate || endDate || userId) {
+      whereClause = "WHERE "
+
+      if (startDate) {
+        whereClause += `timestamp >= $${paramIndex++}`
+        queryParams.push(startDate)
+      }
+
+      if (endDate) {
+        if (startDate) whereClause += " AND "
+        whereClause += `timestamp <= $${paramIndex++}`
+        queryParams.push(endDate)
+      }
+
+      if (userId) {
+        if (startDate || endDate) whereClause += " AND "
+        whereClause += `user_id = $${paramIndex++}`
+        queryParams.push(userId)
+      }
     }
 
-    // Get time spent analytics
-    async getTimeSpentAnalytics(filters: any): Promise<any> {
-        const { startDate, endDate, userId } = filters
+    // Add event type filter
+    if (whereClause) {
+      whereClause += " AND "
+    } else {
+      whereClause = "WHERE "
+    }
+    whereClause += `event_type = $${paramIndex++}`
+    queryParams.push(EventType.PAGE_EXIT)
 
-        // Get all page exit events in the date range
-        const queryFilters: any = {
-            startDate,
-            endDate,
-            eventType: EventType.PAGE_EXIT,
-        }
+    // Get all page exit events in the date range
+    const eventsQuery = `
+      SELECT * FROM events 
+      ${whereClause}
+    `
 
-        let events
+    const eventsResult = await query(eventsQuery, queryParams)
+    const events = eventsResult.rows
 
-        if (userId) {
-            const result = await this.eventService.getEventsByUser(userId, 1, 1000)
-            events = result.events.filter((event) => event.event_type === EventType.PAGE_EXIT)
-        } else {
-            const result = await this.eventService.getEvents(1, 1000, queryFilters)
-            events = result.events
-        }
+    // Calculate time spent by path
+    const timeSpentByPath: Record<string, number> = {}
+    let totalTimeSpent = 0
 
-        // Calculate time spent by path
-        const timeSpentByPath: Record<string, number> = {}
-        let totalTimeSpent = 0
+    events.forEach((event) => {
+      const path = event.path
+      const timeSpent = event.details?.timeSpent || 0
 
-        events.forEach((event) => {
-            const path = event.path
-            const timeSpent = event.details?.timeSpent || 0
+      timeSpentByPath[path] = (timeSpentByPath[path] || 0) + timeSpent
+      totalTimeSpent += timeSpent
+    })
 
-            timeSpentByPath[path] = (timeSpentByPath[path] || 0) + timeSpent
-            totalTimeSpent += timeSpent
-        })
+    // Convert to array and sort by time spent
+    const timeSpentArray = Object.entries(timeSpentByPath).map(([path, timeSpent]) => ({
+      path,
+      timeSpent,
+      timeSpentMinutes: Math.round((timeSpent / 60000) * 10) / 10, // Convert to minutes with 1 decimal
+    }))
 
-        // Convert to array and sort by time spent
-        const timeSpentArray = Object.entries(timeSpentByPath).map(([path, timeSpent]) => ({
-            path,
-            timeSpent,
-            timeSpentMinutes: Math.round((timeSpent / 60000) * 10) / 10, // Convert to minutes with 1 decimal
-        }))
+    timeSpentArray.sort((a, b) => b.timeSpent - a.timeSpent)
 
-        timeSpentArray.sort((a, b) => b.timeSpent - a.timeSpent)
+    return {
+      totalTimeSpent,
+      totalTimeSpentMinutes: Math.round((totalTimeSpent / 60000) * 10) / 10,
+      timeSpentByPath: timeSpentArray,
+    }
+  }
 
-        return {
-            totalTimeSpent,
-            totalTimeSpentMinutes: Math.round((totalTimeSpent / 60000) * 10) / 10,
-            timeSpentByPath: timeSpentArray,
-        }
+  // Get event frequency analytics
+  async getEventFrequencyAnalytics(filters: any): Promise<any> {
+    const { startDate, endDate, interval = "day" } = filters
+    const queryParams: any[] = []
+    let whereClause = ""
+    let paramIndex = 1
+
+    if (startDate || endDate) {
+      whereClause = "WHERE "
+
+      if (startDate) {
+        whereClause += `timestamp >= $${paramIndex++}`
+        queryParams.push(startDate)
+      }
+
+      if (endDate) {
+        if (startDate) whereClause += " AND "
+        whereClause += `timestamp <= $${paramIndex++}`
+        queryParams.push(endDate)
+      }
     }
 
-    // Get event frequency analytics
-    async getEventFrequencyAnalytics(filters: any): Promise<any> {
-        const { startDate, endDate, interval = "day" } = filters
+    // Get all events in the date range
+    const eventsQuery = `
+      SELECT * FROM events 
+      ${whereClause}
+    `
 
-        // Get all events in the date range
-        const { events } = await this.eventService.getEvents(1, 10000, { startDate, endDate })
+    const eventsResult = await query(eventsQuery, queryParams)
+    const events = eventsResult.rows
 
-        // Group events by interval
-        const eventsByInterval: Record<string, number> = {}
+    // Group events by interval
+    const eventsByInterval: Record<string, number> = {}
 
-        events.forEach((event) => {
-            const date = new Date(event.timestamp)
-            let intervalKey
+    events.forEach((event) => {
+      const date = new Date(event.timestamp)
+      let intervalKey
 
-            switch (interval) {
-                case "hour":
-                    intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:00`
-                    break
-                case "day":
-                    intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
-                    break
-                case "week":
-                    // Get the first day of the week (Sunday)
-                    const firstDayOfWeek = new Date(date)
-                    const day = date.getDay()
-                    firstDayOfWeek.setDate(date.getDate() - day)
-                    intervalKey = `Week of ${firstDayOfWeek.getFullYear()}-${firstDayOfWeek.getMonth() + 1}-${firstDayOfWeek.getDate()}`
-                    break
-                case "month":
-                    intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}`
-                    break
-                default:
-                    intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
-            }
+      switch (interval) {
+        case "hour":
+          intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:00`
+          break
+        case "day":
+          intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+          break
+        case "week":
+          // Get the first day of the week (Sunday)
+          const firstDayOfWeek = new Date(date)
+          const day = date.getDay()
+          firstDayOfWeek.setDate(date.getDate() - day)
+          intervalKey = `Week of ${firstDayOfWeek.getFullYear()}-${firstDayOfWeek.getMonth() + 1}-${firstDayOfWeek.getDate()}`
+          break
+        case "month":
+          intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}`
+          break
+        default:
+          intervalKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+      }
 
-            eventsByInterval[intervalKey] = (eventsByInterval[intervalKey] || 0) + 1
-        })
+      eventsByInterval[intervalKey] = (eventsByInterval[intervalKey] || 0) + 1
+    })
 
-        // Convert to array and sort by interval
-        const eventFrequencyArray = Object.entries(eventsByInterval).map(([interval, count]) => ({
-            interval,
-            count,
-        }))
+    // Convert to array and sort by interval
+    const eventFrequencyArray = Object.entries(eventsByInterval).map(([interval, count]) => ({
+      interval,
+      count,
+    }))
 
-        eventFrequencyArray.sort((a, b) => a.interval.localeCompare(b.interval))
+    eventFrequencyArray.sort((a, b) => a.interval.localeCompare(b.interval))
 
-        return {
-            totalEvents: events.length,
-            eventFrequency: eventFrequencyArray,
-        }
+    return {
+      totalEvents: events.length,
+      eventFrequency: eventFrequencyArray,
     }
+  }
 
-    // Get dashboard data (combined analytics)
-    async getDashboardData(filters: any): Promise<any> {
-        const [pageViewAnalytics, userEngagementAnalytics, timeSpentAnalytics, eventFrequencyAnalytics] = await Promise.all(
-            [
-                this.getPageViewAnalytics(filters),
-                this.getUserEngagementAnalytics(filters),
-                this.getTimeSpentAnalytics(filters),
-                this.getEventFrequencyAnalytics({ ...filters, interval: "day" }),
-            ],
-        )
+  // Get dashboard data (combined analytics)
+  async getDashboardData(filters: any): Promise<any> {
+    const [pageViewAnalytics, userEngagementAnalytics, timeSpentAnalytics, eventFrequencyAnalytics] = await Promise.all(
+      [
+        this.getPageViewAnalytics(filters),
+        this.getUserEngagementAnalytics(filters),
+        this.getTimeSpentAnalytics(filters),
+        this.getEventFrequencyAnalytics({ ...filters, interval: "day" }),
+      ],
+    )
 
-        return {
-            pageViews: pageViewAnalytics,
-            userEngagement: userEngagementAnalytics,
-            timeSpent: timeSpentAnalytics,
-            eventFrequency: eventFrequencyAnalytics,
-        }
+    return {
+      pageViews: pageViewAnalytics,
+      userEngagement: userEngagementAnalytics,
+      timeSpent: timeSpentAnalytics,
+      eventFrequency: eventFrequencyAnalytics,
     }
+  }
 }
 

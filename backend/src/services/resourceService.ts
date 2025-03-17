@@ -1,111 +1,144 @@
-import { supabase } from "../configs/supabase";
+import { query } from "../db/postgres"
 
 export class ResourceService {
-    // Get resources with pagination and filtering
-    async getResources(page: number, limit: number, filters: any): Promise<{ resources: any[]; total: number }> {
-        let query = supabase.from("resources").select("*", { count: "exact" })
+  // Get resources with pagination and filtering
+  async getResources(page: number, limit: number, filters: any): Promise<{ resources: any[]; total: number }> {
+    let queryText = "SELECT * FROM resources"
+    const queryParams: any[] = []
+    const conditions: string[] = []
+    let paramIndex = 1
 
-        // Apply filters
-        if (filters.courseId) {
-            query = query.eq("course_id", filters.courseId)
-        }
-
-        if (filters.type) {
-            query = query.eq("type", filters.type)
-        }
-
-        // Apply pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        query = query.range(from, to).order("created_at", { ascending: false })
-
-        const { data, error, count } = await query
-
-        if (error) {
-            console.error("Error getting resources:", error)
-            throw error
-        }
-
-        return {
-            resources: data || [],
-            total: count || 0,
-        }
+    // Apply filters
+    if (filters.courseId) {
+      conditions.push(`course_id = $${paramIndex++}`)
+      queryParams.push(filters.courseId)
     }
 
-    // Get a resource by ID
-    async getResourceById(resourceId: string): Promise<any> {
-        const { data, error } = await supabase.from("resources").select("*").eq("resource_id", resourceId).single()
-
-        if (error) {
-            console.error("Error getting resource by ID:", error)
-            throw error
-        }
-
-        return data
+    if (filters.type) {
+      conditions.push(`type = $${paramIndex++}`)
+      queryParams.push(filters.type)
     }
 
-    // Create a resource
-    async createResource(resource: any): Promise<any> {
-        const { data, error } = await supabase.from("resources").insert([resource]).select()
-
-        if (error) {
-            console.error("Error creating resource:", error)
-            throw error
-        }
-
-        return data?.[0]
+    // Add WHERE clause if there are conditions
+    if (conditions.length > 0) {
+      queryText += " WHERE " + conditions.join(" AND ")
     }
 
-    // Update a resource
-    async updateResource(resourceId: string, resourceData: any): Promise<any> {
-        const { data, error } = await supabase.from("resources").update(resourceData).eq("resource_id", resourceId).select()
+    // Get total count
+    const countResult = await query(`SELECT COUNT(*) FROM (${queryText}) AS count_query`, queryParams)
+    const total = Number.parseInt(countResult.rows[0].count, 10)
 
-        if (error) {
-            console.error("Error updating resource:", error)
-            throw error
-        }
+    // Apply pagination
+    const offset = (page - 1) * limit
+    queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`
+    queryParams.push(limit, offset)
 
-        return data?.[0]
+    // Execute the query
+    const result = await query(queryText, queryParams)
+
+    return {
+      resources: result.rows,
+      total,
+    }
+  }
+
+  // Get a resource by ID
+  async getResourceById(resourceId: string): Promise<any> {
+    const result = await query("SELECT * FROM resources WHERE resource_id = $1", [resourceId])
+
+    return result.rows[0]
+  }
+
+  // Create a resource
+  async createResource(resource: any): Promise<any> {
+    const result = await query(
+      `INSERT INTO resources (
+        resource_id, course_id, title, type, url, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6) 
+      RETURNING *`,
+      [resource.resource_id, resource.course_id, resource.title, resource.type, resource.url, resource.metadata || {}],
+    )
+
+    return result.rows[0]
+  }
+
+  // Update a resource
+  async updateResource(resourceId: string, resourceData: any): Promise<any> {
+    // Build the SET clause dynamically based on provided fields
+    const updates: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+
+    if (resourceData.title !== undefined) {
+      updates.push(`title = $${paramIndex++}`)
+      values.push(resourceData.title)
     }
 
-    // Delete a resource
-    async deleteResource(resourceId: string): Promise<boolean> {
-        const { error } = await supabase.from("resources").delete().eq("resource_id", resourceId)
-
-        if (error) {
-            console.error("Error deleting resource:", error)
-            throw error
-        }
-
-        return true
+    if (resourceData.type !== undefined) {
+      updates.push(`type = $${paramIndex++}`)
+      values.push(resourceData.type)
     }
 
-    // Get resource interactions
-    async getResourceInteractions(
-        resourceId: string,
-        page: number,
-        limit: number,
-    ): Promise<{ interactions: any[]; total: number }> {
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        const { data, error, count } = await supabase
-            .from("resource_interactions")
-            .select("*", { count: "exact" })
-            .eq("resource_id", resourceId)
-            .range(from, to)
-            .order("timestamp", { ascending: false })
-
-        if (error) {
-            console.error("Error getting resource interactions:", error)
-            throw error
-        }
-
-        return {
-            interactions: data || [],
-            total: count || 0,
-        }
+    if (resourceData.course_id !== undefined) {
+      updates.push(`course_id = $${paramIndex++}`)
+      values.push(resourceData.course_id)
     }
+
+    if (resourceData.url !== undefined) {
+      updates.push(`url = $${paramIndex++}`)
+      values.push(resourceData.url)
+    }
+
+    if (resourceData.metadata !== undefined) {
+      updates.push(`metadata = $${paramIndex++}`)
+      values.push(resourceData.metadata)
+    }
+
+    // If no updates, return the existing resource
+    if (updates.length === 0) {
+      return this.getResourceById(resourceId)
+    }
+
+    // Add the resourceId to the values array
+    values.push(resourceId)
+
+    const result = await query(
+      `UPDATE resources SET ${updates.join(", ")} WHERE resource_id = $${paramIndex} RETURNING *`,
+      values,
+    )
+
+    return result.rows[0]
+  }
+
+  // Delete a resource
+  async deleteResource(resourceId: string): Promise<boolean> {
+    const result = await query("DELETE FROM resources WHERE resource_id = $1 RETURNING *", [resourceId])
+
+    return result.rows.length > 0
+  }
+
+  // Get resource interactions
+  async getResourceInteractions(
+    resourceId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ interactions: any[]; total: number }> {
+    const offset = (page - 1) * limit
+
+    // Get total count
+    const countResult = await query("SELECT COUNT(*) FROM resource_interactions WHERE resource_id = $1", [resourceId])
+    const total = Number.parseInt(countResult.rows[0].count, 10)
+
+    // Get interactions with pagination
+    const result = await query(
+      "SELECT * FROM resource_interactions WHERE resource_id = $1 ORDER BY timestamp DESC LIMIT $2 OFFSET $3",
+      [resourceId, limit, offset],
+    )
+
+    return {
+      interactions: result.rows,
+      total,
+    }
+  }
 }
 

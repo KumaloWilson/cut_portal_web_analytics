@@ -1,4 +1,4 @@
-import { query } from "../db/postgres"
+import { query, transaction } from "../configs/postgres";
 
 export class ModuleService {
   // Get modules with pagination and filtering

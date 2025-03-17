@@ -1,4 +1,4 @@
-import { query, transaction } from "../db/postgres"
+import { query, transaction } from "../configs/postgres";
 
 export class StudentService {
   // Get students with pagination and filtering
@@ -210,21 +210,21 @@ export class StudentService {
 
     // Count events by type
     const eventCounts: Record<string, number> = {}
-    eventsResult.rows.forEach((event) => {
+    eventsResult.rows.forEach((event: { event_type: any; }) => {
       const eventType = event.event_type
       eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
     })
 
     // Group events by day
     const eventsByDay: Record<string, number> = {}
-    eventsResult.rows.forEach((event) => {
+    eventsResult.rows.forEach((event: { timestamp: string | number | Date; }) => {
       const day = new Date(event.timestamp).toISOString().split("T")[0]
       eventsByDay[day] = (eventsByDay[day] || 0) + 1
     })
 
     // Calculate time spent
     let totalTimeSpent = 0
-    eventsResult.rows.forEach((event) => {
+    eventsResult.rows.forEach((event: { duration: number; }) => {
       if (event.duration) {
         totalTimeSpent += event.duration
       }
@@ -297,7 +297,7 @@ export class StudentService {
 
   // Update student modules
   async updateStudentModules(studentId: string, modules: any[]): Promise<any> {
-    return transaction(async (client) => {
+    return transaction(async (client: { query: (arg0: string, arg1: any[]) => any; }) => {
       // First, check if the student exists
       const studentResult = await client.query("SELECT * FROM students WHERE student_id = $1", [studentId])
 

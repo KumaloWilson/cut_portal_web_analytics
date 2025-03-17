@@ -16,11 +16,11 @@ class BackgroundService {
 
     private initializeListeners(): void {
         // Listen for messages from content script
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        chrome.runtime.onMessage.addListener((message: { action: string; event: TrackingEvent; userId: string; userInfo: any; courseId: string; courseInfo: any }, sender: { tab: { id: any; incognito: any; url: string } }, sendResponse: (arg0: { success: boolean }) => void) => {
             if (message.action === "trackEvent") {
                 // Add IP address if available
                 if (sender.tab && sender.tab.id) {
-                    message.event.ipAddress = sender.tab.incognito ? null : sender.tab.url?.split("/")[2] || null
+                    message.event.ipAddress = sender.tab.incognito ? undefined : sender.tab.url?.split("/")[2] || undefined
                 }
 
                 this.queueEvent(message.event)
@@ -36,7 +36,7 @@ class BackgroundService {
         })
 
         // Listen for navigation events
-        chrome.webNavigation.onCompleted.addListener((details) => {
+        chrome.webNavigation.onCompleted.addListener((details: { url: string | string[]; tabId: any }) => {
             if (details.url.includes("elearning.cut.ac.zw")) {
                 chrome.scripting.executeScript({
                     target: { tabId: details.tabId },

@@ -25,7 +25,7 @@ class ContentTracker {
         this.collectDeviceInfo()
 
         // Check if tracking is enabled
-        chrome.storage.local.get(["tracking", "userId", "sessionId"], (result) => {
+        chrome.storage.local.get(["tracking", "userId", "sessionId"], (result: { tracking: boolean; userId: null; sessionId: string }) => {
             this.isTracking = result.tracking !== false
             this.userId = result.userId || null
             this.sessionId = result.sessionId || this.generateSessionId()

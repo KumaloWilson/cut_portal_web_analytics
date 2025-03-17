@@ -397,7 +397,7 @@ const ModuleDetailPage: React.FC = () => {
                               .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
                               .map(([day, count]) => ({
                                 x: day,
-                                y: count,
+                                y: count as number,
                               })),
                           },
                         ]}
@@ -452,12 +452,12 @@ const ModuleDetailPage: React.FC = () => {
                     ) : activity && activity.eventCounts ? (
                       <div className="h-80">
                         <ResponsiveBar
-                          data={Object.entries(activity.eventCounts).map(([key, value]) => ({
+                          data={Object.entries(activity.eventCounts || {}).map(([key, value]) => ({
                             eventType: key
                               .split("_")
                               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                               .join(" "),
-                            count: value,
+                            count: value as number,
                           }))}
                           keys={["count"]}
                           indexBy="eventType"
@@ -488,9 +488,8 @@ const ModuleDetailPage: React.FC = () => {
                           labelSkipWidth={12}
                           labelSkipHeight={12}
                           labelTextColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                          animate={true}
-                          motionStiffness={90}
-                          motionDamping={15}
+                                                  animate={true}
+            motionConfig="elastic"
                         />
                       </div>
                     ) : (

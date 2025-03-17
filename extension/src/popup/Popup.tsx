@@ -27,7 +27,7 @@ const Popup: React.FC = () => {
 
     useEffect(() => {
         // Load tracking state and user ID from storage
-        chrome.storage.local.get(["tracking", "userId"], (result) => {
+        chrome.storage.local.get(["tracking", "userId"], (result: { tracking: boolean; userId: any }) => {
             setState((prevState) => ({
                 ...prevState,
                 isTracking: result.tracking !== false,

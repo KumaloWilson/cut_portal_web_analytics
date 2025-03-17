@@ -32,7 +32,7 @@ export async function up(client: PoolClient) {
     FROM users u
     LEFT JOIN events e ON u.user_id = e.user_id
     LEFT JOIN sessions s ON u.user_id = s.user_id
-    LEFT JOIN quiz_attempts qa ON u.user_id = qa.user_id
+    LEFT JOIN quiz_attempts qa ON u.user_id = qa.student_id
     GROUP BY u.user_id, u.first_name, u.last_name, u.email, u.last_active_at;
   `)
 

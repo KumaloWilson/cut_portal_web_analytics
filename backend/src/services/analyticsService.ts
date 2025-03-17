@@ -1,4 +1,4 @@
-import { query } from "../db/postgres"
+import { query } from "../configs/postgres"
 import { EventType } from "../types/events"
 
 export class AnalyticsService {
@@ -38,7 +38,7 @@ export class AnalyticsService {
     // Group page views by path
     const pageViewsByPath: Record<string, number> = {}
 
-    events.forEach((event) => {
+    events.forEach((event: { path: any }) => {
       const path = event.path
       pageViewsByPath[path] = (pageViewsByPath[path] || 0) + 1
     })
@@ -98,7 +98,7 @@ export class AnalyticsService {
       // Calculate engagement metrics
       const eventCounts: Record<string, number> = {}
 
-      events.forEach((event) => {
+      events.forEach((event: { event_type: any }) => {
         const eventType = event.event_type
         eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
       })
@@ -121,7 +121,7 @@ export class AnalyticsService {
       // Group by user
       const userEngagement: Record<string, any> = {}
 
-      events.forEach((event) => {
+      events.forEach((event: { user_id: any; event_type: any }) => {
         const userId = event.user_id
         if (!userId) return
 
@@ -196,7 +196,7 @@ export class AnalyticsService {
     // Group resource accesses by resource
     const resourceAccessesByResource: Record<string, number> = {}
 
-    events.forEach((event) => {
+    events.forEach((event: { details: { resourceId: string } }) => {
       const resourceId = event.details?.resourceId || "unknown"
       resourceAccessesByResource[resourceId] = (resourceAccessesByResource[resourceId] || 0) + 1
     })
@@ -265,7 +265,7 @@ export class AnalyticsService {
     const timeSpentByPath: Record<string, number> = {}
     let totalTimeSpent = 0
 
-    events.forEach((event) => {
+    events.forEach((event: { path: any; details: { timeSpent: number } }) => {
       const path = event.path
       const timeSpent = event.details?.timeSpent || 0
 
@@ -323,7 +323,7 @@ export class AnalyticsService {
     // Group events by interval
     const eventsByInterval: Record<string, number> = {}
 
-    events.forEach((event) => {
+    events.forEach((event: { timestamp: string | number | Date }) => {
       const date = new Date(event.timestamp)
       let intervalKey
 

@@ -1,4 +1,5 @@
-import { query, transaction } from "../db/postgres"
+import { query } from "../configs/postgres"
+import { transaction } from "../configs/postgres"
 import type { TrackingEvent } from "../types/events"
 
 export class EventService {

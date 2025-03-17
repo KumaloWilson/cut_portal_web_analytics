@@ -12,8 +12,8 @@ import { resourceRoutes } from "./routes/resourceRoutes"
 import { quizRoutes } from "./routes/quizRoutes"
 import { setupSocketHandlers } from "./services/socketService"
 import { errorHandler } from "./middleware/errorHandler"
-import { initializeDatabase } from "./db/setup-db"
-import { closePool } from "./db/postgres"
+import { closePool } from "./configs/postgres"
+import { initializeDatabase } from "./configs/setup-db"
 
 // Load environment variables
 dotenv.config()

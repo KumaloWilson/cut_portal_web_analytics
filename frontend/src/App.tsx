@@ -3,11 +3,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { Toaster } from "react-hot-toast"
 import { QueryClient, QueryClientProvider } from "react-query"
 import { SocketProvider } from "./contexts/SocketContext"
+import { ThemeProvider } from "./contexts/ThemeContext"
 import Dashboard from "./pages/Dashboard"
 import EventsPage from "./pages/EventsPage"
-import UsersPage from "./pages/UsersPage"
+import StudentsPage from "./pages/StudentsPage"
+import StudentDetailPage from "./pages/StudentDetailPage"
 import SettingsPage from "./pages/SettingsPage"
-import "./index.css"
+import "./App.css"
 import Layout from "./components/navigation/Layout"
 
 // Create a client for React Query
@@ -24,25 +26,30 @@ const queryClient = new QueryClient({
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <SocketProvider>
-        <Router future={{ v7_startTransition: true }}>
-          <Toaster position="top-right" />
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="events" element={<EventsPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              {/* Add a catch-all route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </Router>
-      </SocketProvider>
+      <ThemeProvider>
+        <SocketProvider>
+          <Router future={{ v7_startTransition: true }}>
+            <Toaster position="top-right" />
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="events" element={<EventsPage />} />
+                <Route path="students" element={<StudentsPage />} />
+                <Route path="students/:studentId" element={<StudentDetailPage />} />
+                {/* <Route path="modules" element={<ModulesPage />} />
+                <Route path="modules/:moduleId" element={<ModuleDetailPage />} />
+                <Route path="faculties" element={<FacultiesPage />} /> */}
+                <Route path="settings" element={<SettingsPage />} />
+                {/* Add a catch-all route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </Router>
+        </SocketProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }
-
 
 export default App
 

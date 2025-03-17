@@ -1,4 +1,4 @@
-import { runMigrations } from "./migrations"
+import { runMigrations } from "../migrations"
 
 /**
  * Initialize the database by running migrations and setting up initial data

@@ -55,9 +55,11 @@ export async function getClient(): Promise<PoolClient> {
   const release = client.release
 
   // Monkey patch the query method to keep track of the last query executed
-  client.query = (...args: any[]) => {
-    client.lastQuery = args
-    return query.apply(client, args)
+  const originalQuery = client.query.bind(client)
+  ;(client as any).lastQuery = null
+  client.query = (...args: [string | import('pg').QueryConfig, ...any[]]) => {
+    (client as any).lastQuery = args
+    return originalQuery(...args)
   }
 
   // Monkey patch the release method to log any unreleased clients

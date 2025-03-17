@@ -1,4 +1,4 @@
-import { query } from "../db/postgres"
+import { query } from "../configs/postgres";
 
 export class QuizService {
   // Get quizzes with pagination and filtering

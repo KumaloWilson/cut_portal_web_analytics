@@ -1,4 +1,4 @@
-import { query } from "../db/postgres"
+import { query } from "../configs/postgres";
 
 export class UserService {
   // Get users with pagination and filtering
@@ -164,7 +164,7 @@ export class UserService {
       [userId],
     )
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: { role: any; enrolled_at: any; last_accessed_at: any; course_id: any; title: any; description: any; instructor_id: any; created_at: any; metadata: any; }) => ({
       role: row.role,
       enrolled_at: row.enrolled_at,
       last_accessed_at: row.last_accessed_at,

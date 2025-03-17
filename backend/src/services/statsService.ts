@@ -1,4 +1,4 @@
-import { query } from "../db/postgres"
+import { query } from "../configs/postgres"
 import { EventType } from "../types/events"
 
 export class StatsService {
@@ -87,7 +87,7 @@ export class StatsService {
     // Count events by type
     const eventCounts: Record<string, number> = {}
 
-    events.forEach((event) => {
+    events.forEach((event: { event_type: any }) => {
       const eventType = event.event_type
       eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
     })
@@ -99,7 +99,7 @@ export class StatsService {
       eventsByHour[i] = 0
     }
 
-    events.forEach((event) => {
+    events.forEach((event: { timestamp: string | number | Date }) => {
       const hour = new Date(event.timestamp).getHours()
       eventsByHour[hour] = (eventsByHour[hour] || 0) + 1
     })
@@ -139,7 +139,7 @@ export class StatsService {
       eventsByDay[i] = 0
     }
 
-    events.forEach((event) => {
+    events.forEach((event: { timestamp: string | number | Date }) => {
       const day = new Date(event.timestamp).getDay()
       eventsByDay[day] = (eventsByDay[day] || 0) + 1
     })
@@ -147,7 +147,7 @@ export class StatsService {
     // Count events by type
     const eventCounts: Record<string, number> = {}
 
-    events.forEach((event) => {
+    events.forEach((event: { event_type: any }) => {
       const eventType = event.event_type
       eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
     })
@@ -187,7 +187,7 @@ export class StatsService {
       eventsByDay[i] = 0
     }
 
-    events.forEach((event) => {
+    events.forEach((event: { timestamp: string | number | Date }) => {
       const day = new Date(event.timestamp).getDate()
       eventsByDay[day] = (eventsByDay[day] || 0) + 1
     })
@@ -195,7 +195,7 @@ export class StatsService {
     // Count events by type
     const eventCounts: Record<string, number> = {}
 
-    events.forEach((event) => {
+    events.forEach((event: { event_type: any }) => {
       const eventType = event.event_type
       eventCounts[eventType] = (eventCounts[eventType] || 0) + 1
     })

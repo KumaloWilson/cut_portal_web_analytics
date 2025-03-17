@@ -1,4 +1,4 @@
-import { query } from "../db/postgres"
+import { query } from "../configs/postgres";
 
 export class CourseService {
   // Get courses with pagination and filtering
@@ -169,7 +169,7 @@ export class CourseService {
     const result = await query(queryText, queryParams)
 
     // Format the results
-    const users = result.rows.map((row) => ({
+    const users = result.rows.map((row: { role: any; enrolled_at: any; last_accessed_at: any; user_id: any; first_name: any; last_name: any; email: any; user_role: any; last_active_at: any; }) => ({
       role: row.role,
       enrolled_at: row.enrolled_at,
       last_accessed_at: row.last_accessed_at,

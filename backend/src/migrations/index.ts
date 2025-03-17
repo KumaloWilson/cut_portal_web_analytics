@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
-import { query, transaction } from "../postgres"
+import { query, transaction } from "../configs/postgres"
+
 
 // Migration metadata table to track which migrations have been run
 const MIGRATIONS_TABLE = "migrations"
@@ -23,7 +24,7 @@ export async function runMigrations() {
     .sort() // Sort to ensure migrations run in order
 
   // Determine which migrations need to be run
-  const appliedMigrationNames = appliedMigrations.map((m) => m.name)
+  const appliedMigrationNames = appliedMigrations.map((m: { name: any }) => m.name)
   const pendingMigrations = migrationFiles.filter((file) => !appliedMigrationNames.includes(file))
 
   if (pendingMigrations.length === 0) {

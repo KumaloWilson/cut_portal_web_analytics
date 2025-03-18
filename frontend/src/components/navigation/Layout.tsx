@@ -5,7 +5,8 @@ import { Outlet } from "react-router-dom"
 import { useTheme } from "../../contexts/ThemeContext"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider } from "../../components/ui/sidebar"
+
 
 export default function Layout() {
   const { theme } = useTheme()

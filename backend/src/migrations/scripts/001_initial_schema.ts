@@ -49,8 +49,8 @@ export async function up(client: PoolClient) {
     CREATE TABLE IF NOT EXISTS events (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       event_type TEXT NOT NULL,
-      user_id TEXT REFERENCES users(user_id),
-      student_id TEXT REFERENCES students(student_id),
+      user_id TEXT,
+      student_id TEXT,
       url TEXT NOT NULL,
       path TEXT NOT NULL,
       details JSONB NOT NULL,
@@ -70,8 +70,8 @@ export async function up(client: PoolClient) {
     CREATE TABLE IF NOT EXISTS sessions (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       session_id TEXT NOT NULL UNIQUE,
-      user_id TEXT REFERENCES users(user_id),
-      student_id TEXT REFERENCES students(student_id),
+      user_id TEXT,
+      student_id TEXT,
       start_time TIMESTAMPTZ NOT NULL,
       end_time TIMESTAMPTZ,
       duration INTEGER,
@@ -90,7 +90,7 @@ export async function up(client: PoolClient) {
       module_code TEXT,
       title TEXT NOT NULL,
       description TEXT,
-      instructor_id TEXT REFERENCES users(user_id),
+      instructor_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       metadata JSONB
     );
@@ -100,8 +100,8 @@ export async function up(client: PoolClient) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS module_enrollments (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      module_id TEXT REFERENCES modules(module_id),
-      student_id TEXT REFERENCES students(student_id),
+      module_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
       role TEXT NOT NULL,
       enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_accessed_at TIMESTAMPTZ,
@@ -114,7 +114,7 @@ export async function up(client: PoolClient) {
     CREATE TABLE IF NOT EXISTS resources (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       resource_id TEXT NOT NULL UNIQUE,
-      module_id TEXT REFERENCES modules(module_id),
+      module_id TEXT,
       title TEXT NOT NULL,
       type TEXT NOT NULL,
       url TEXT,
@@ -127,8 +127,8 @@ export async function up(client: PoolClient) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS resource_interactions (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      resource_id TEXT REFERENCES resources(resource_id),
-      student_id TEXT REFERENCES students(student_id),
+      resource_id TEXT NOT NULL,
+      student_id TEXT,
       interaction_type TEXT NOT NULL,
       timestamp TIMESTAMPTZ NOT NULL,
       duration INTEGER,
@@ -142,7 +142,7 @@ export async function up(client: PoolClient) {
     CREATE TABLE IF NOT EXISTS quizzes (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       quiz_id TEXT NOT NULL UNIQUE,
-      module_id TEXT REFERENCES modules(module_id),
+      module_id TEXT,
       title TEXT NOT NULL,
       description TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -154,8 +154,8 @@ export async function up(client: PoolClient) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS quiz_attempts (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      quiz_id TEXT REFERENCES quizzes(quiz_id),
-      student_id TEXT REFERENCES students(student_id),
+      quiz_id TEXT NOT NULL,
+      student_id TEXT,
       start_time TIMESTAMPTZ NOT NULL,
       end_time TIMESTAMPTZ,
       score NUMERIC,
@@ -171,7 +171,7 @@ export async function up(client: PoolClient) {
     CREATE TABLE IF NOT EXISTS past_exam_papers (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       paper_id TEXT NOT NULL UNIQUE,
-      module_id TEXT REFERENCES modules(module_id),
+      module_id TEXT,
       year TEXT,
       description TEXT,
       document_path TEXT,
@@ -185,8 +185,8 @@ export async function up(client: PoolClient) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS past_exam_accesses (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      paper_id TEXT REFERENCES past_exam_papers(paper_id),
-      student_id TEXT REFERENCES students(student_id),
+      paper_id TEXT NOT NULL,
+      student_id TEXT,
       timestamp TIMESTAMPTZ NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -211,7 +211,7 @@ export async function up(client: PoolClient) {
       program_id TEXT NOT NULL UNIQUE,
       program_code TEXT NOT NULL,
       program_name TEXT NOT NULL,
-      faculty_id TEXT REFERENCES faculties(faculty_id),
+      faculty_id TEXT,
       attendance_type TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       metadata JSONB

@@ -1,5 +1,5 @@
 import type React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { ResponsivePie } from "@nivo/pie"
 
 interface FacultyDistributionChartProps {

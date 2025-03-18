@@ -2,11 +2,11 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import CalendarHeatmap from "react-calendar-heatmap"
 import "react-calendar-heatmap/dist/styles.css"
 import { subDays, format, startOfWeek, addDays } from "date-fns"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs"
 import { Tooltip } from "react-tooltip"
 
 interface ActivityHeatmapProps {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useTheme } from "@/contexts/ThemeContext"
+import { useTheme } from "../../contexts/ThemeContext"
 import type React from "react"
 import { Outlet } from "react-router-dom"
 import Sidebar from "./Sidebar"

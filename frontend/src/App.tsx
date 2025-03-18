@@ -9,7 +9,7 @@ import EventsPage from "./pages/EventsPage"
 import StudentsPage from "./pages/StudentsPage"
 import StudentDetailPage from "./pages/StudentDetailPage"
 import SettingsPage from "./pages/SettingsPage"
-import "./App.css"
+import "./index.css"
 import Layout from "./components/navigation/Layout"
 
 // Create a client for React Query

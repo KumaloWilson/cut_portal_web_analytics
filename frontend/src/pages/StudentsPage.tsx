@@ -10,7 +10,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner"
 import ErrorDisplay from "../components/common/ErrorDisplay"
 import { User, Filter, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import Header from "../components/navigation/Header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { exportToExcel } from "../utils/exportUtils"
 
 const StudentsPage: React.FC = () => {

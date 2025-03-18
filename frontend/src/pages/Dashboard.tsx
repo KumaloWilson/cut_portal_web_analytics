@@ -18,8 +18,8 @@ import LoadingSpinner from "../components/common/LoadingSpinner"
 import ErrorDisplay from "../components/common/ErrorDisplay"
 import { exportToExcel } from "../utils/exportUtils"
 import Header from "../components/navigation/Header"
-import ModulePopularityChart from "@/components/dashboard/ModulePopularity"
-import ActivityHeatmap from "@/components/dashboard/ActivityHeatMap"
+import ModulePopularityChart from "../components/dashboard/ModulePopularity"
+import ActivityHeatmap from "../components/dashboard/ActivityHeatMap"
 
 const Dashboard: React.FC = () => {
   const socket = useSocket()

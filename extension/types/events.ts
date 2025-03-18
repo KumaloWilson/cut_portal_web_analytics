@@ -17,20 +17,28 @@ export enum EventType {
     ASSIGNMENT_SUBMISSION = "assignment_submission",
     NOTIFICATION_CLICK = "notification_click",
     ERROR = "error",
-}
-
-export interface TrackingEvent {
+    MODULE_LIST_VIEW = "module_list_view",
+    PAST_EXAM_ACCESS = "past_exam_access",
+    PAYMENT_INTERACTION = "payment_interaction",
+    RESULTS_VIEW = "results_view",
+    PROFILE_VIEW = "profile_view",
+    BURSARY_VIEW = "bursary_view",
+  }
+  
+  export interface TrackingEvent {
     eventType: EventType
     url: string
     path: string
     details: Record<string, any>
     timestamp: string
     userId: string | null
-    sessionId: string | null
+    studentId?: string | null
+    sessionId?: string | null
     deviceInfo?: Record<string, any>
     browserInfo?: Record<string, any>
     ipAddress?: string
     referrer?: string
     duration?: number
-}
-
+  }
+  
+  

@@ -1,63 +1,96 @@
-import type React from "react"
-import { Eye, MousePointer, FileText, Clock } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Eye, MousePointer, Clock, FileText } from "lucide-react"
 
 interface OverviewStatsProps {
-    data: any
+  data: any
 }
 
-const OverviewStats: React.FC<OverviewStatsProps> = ({ data }) => {
+export default function OverviewStats({ data }: OverviewStatsProps) {
+  if (!data) {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <StatCard
-                title="Total Page Views"
-                value={data.pageViews.totalPageViews}
-                icon={<Eye className="h-6 w-6 text-blue-500" />}
-                description="Total number of page views"
-            />
-
-            <StatCard
-                title="Button Clicks"
-                value={data.userEngagement.totalEvents}
-                icon={<MousePointer className="h-6 w-6 text-green-500" />}
-                description="Total number of interactions"
-            />
-
-            <StatCard
-                title="Form Submissions"
-                value={data.eventFrequency.totalEvents}
-                icon={<FileText className="h-6 w-6 text-purple-500" />}
-                description="Total number of events recorded"
-            />
-
-            <StatCard
-                title="Time Spent"
-                value={`${data.timeSpent.totalTimeSpentMinutes} min`}
-                icon={<Clock className="h-6 w-6 text-orange-500" />}
-                description="Total time spent on the portal"
-            />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array(4)
+          .fill(0)
+          .map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-2">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    {i === 0 && <Eye className="h-5 w-5 text-primary" />}
+                    {i === 1 && <MousePointer className="h-5 w-5 text-primary" />}
+                    {i === 2 && <FileText className="h-5 w-5 text-primary" />}
+                    {i === 3 && <Clock className="h-5 w-5 text-primary" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Loading...</p>
+                    <p className="text-2xl font-bold">-</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+      </div>
     )
-}
+  }
 
-interface StatCardProps {
-    title: string
-    value: string | number
-    icon: React.ReactNode
-    description: string
-}
-
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, description }) => {
-    return (
-        <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-700">{title}</h3>
-                {icon}
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="text-3xl font-bold mb-2">{value}</div>
-            <p className="text-sm text-gray-500">{description}</p>
-        </div>
-    )
-}
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Page Views</p>
+              <p className="text-2xl font-bold">{data.totalPageViews?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-export default OverviewStats
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+              <MousePointer className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Interactions</p>
+              <p className="text-2xl font-bold">{data.totalInteractions?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Resources</p>
+              <p className="text-2xl font-bold">{data.totalResources?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Avg. Time</p>
+              <p className="text-2xl font-bold">{data.avgTimeSpent || 0} min</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 

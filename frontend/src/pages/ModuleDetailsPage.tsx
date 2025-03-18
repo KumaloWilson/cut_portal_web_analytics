@@ -3,18 +3,18 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import { Badge } from "../components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import LoadingSpinner  from "../components/common/LoadingSpinner"
 import ErrorDisplay  from "../components/common/ErrorDisplay"
-import { LineChart, BarChart, PieChart } from "../components/ui/chart"
 import { fetchModuleById, fetchModuleActivity, fetchResources } from "../services/api"
 import { exportToExcel, exportToCSV, exportToPDF } from "../utils/exportUtils"
 import { ArrowLeft, Download, Users, FileText, Clock, Calendar } from "lucide-react"
+import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts"
 
 const ModuleDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -23,7 +23,7 @@ const ModuleDetailPage: React.FC = () => {
   const [activity, setActivity] = useState<any[]>([])
   const [resources, setResources] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<string>("overview")
   const [timeRange, setTimeRange] = useState<number>(30) // Default to 30 days
 
@@ -74,7 +74,7 @@ const ModuleDetailPage: React.FC = () => {
     const fileName = `module-${module.moduleCode}-report`
 
     if (type === "excel") {
-      exportToExcel(activityData, fileName)
+      exportToExcel([{ sheetName: "Activity Data", data: activityData }], fileName)
     } else if (type === "csv") {
       exportToCSV(activityData, fileName)
     } else if (type === "pdf") {
@@ -93,7 +93,9 @@ const ModuleDetailPage: React.FC = () => {
   if (error || !module) {
     return (
       <div className="container mx-auto py-12">
-        <ErrorDisplay error={error || "Module not found"} />
+        <div className="container mx-auto py-12">
+        <ErrorDisplay error={new Error(error)} />
+      </div>
         <Button variant="outline" onClick={() => navigate("/modules")} className="mt-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Modules
@@ -195,12 +197,17 @@ const ModuleDetailPage: React.FC = () => {
             <CardContent className="h-80">
               <LineChart
                 data={activityChartData}
-                index="date"
-                categories={["pageViews", "uniqueUsers"]}
-                colors={["blue", "green"]}
-                valueFormatter={(value: any) => `${value}`}
-                yAxisWidth={40}
-              />
+                width={500}
+                height={300}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="pageViews" stroke="blue" />
+                <Line type="monotone" dataKey="uniqueUsers" stroke="green" />
+              </LineChart>
             </CardContent>
           </Card>
 
@@ -211,12 +218,15 @@ const ModuleDetailPage: React.FC = () => {
             <CardContent className="h-80">
               <LineChart
                 data={activityChartData}
-                index="date"
-                categories={["timeSpent"]}
-                colors={["purple"]}
-                valueFormatter={(value: any) => `${value} mins`}
-                yAxisWidth={50}
-              />
+                width={500}
+                height={300}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} mins`} />
+                <Line type="monotone" dataKey="timeSpent" stroke="purple" />
+              </LineChart>
             </CardContent>
           </Card>
         </div>
@@ -229,12 +239,16 @@ const ModuleDetailPage: React.FC = () => {
             <CardContent className="h-80">
               <BarChart
                 data={resourceAccessData}
-                index="name"
-                categories={["value"]}
-                colors={["blue"]}
-                valueFormatter={(value: any) => `${value} accesses`}
-                yAxisWidth={40}
-              />
+                width={500}
+                height={300}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} accesses`} />
+                <Legend />
+                <Bar dataKey="value" fill="blue" />
+              </BarChart>
             </CardContent>
           </Card>
 
@@ -244,13 +258,23 @@ const ModuleDetailPage: React.FC = () => {
             </CardHeader>
             <CardContent className="h-80 flex justify-center items-center">
               <div className="w-full h-full max-w-xs">
-                <PieChart
-                  data={eventTypeData}
-                  index="name"
-                  categories={["value"]}
-                  colors={["blue", "green", "yellow", "purple", "red"]}
-                  valueFormatter={(value: any) => `${value} events`}
-                />
+                <PieChart width={400} height={300}>
+                  <Tooltip formatter={(value) => `${value} events`} />
+                  <Legend />
+                  <Pie
+                    data={eventTypeData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    fill="#8884d8"
+                  >
+                    {eventTypeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#FF0000"][index]} />
+                    ))}
+                  </Pie>
+                </PieChart>
               </div>
             </CardContent>
           </Card>
@@ -331,18 +355,21 @@ const ModuleDetailPage: React.FC = () => {
           </CardHeader>
           <CardContent className="h-80">
             <BarChart
+              width={500}
+              height={300}
               data={[
                 { name: "High", value: module.studentEngagement?.high || 0 },
                 { name: "Medium", value: module.studentEngagement?.medium || 0 },
                 { name: "Low", value: module.studentEngagement?.low || 0 },
                 { name: "None", value: module.studentEngagement?.none || 0 },
               ]}
-              index="name"
-              categories={["value"]}
-              colors={["blue"]}
-              valueFormatter={(value: any) => `${value} students`}
-              yAxisWidth={40}
-            />
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip formatter={(value) => `${value} students`} />
+              <Bar dataKey="value" fill="blue" />
+            </BarChart>
           </CardContent>
         </Card>
       </div>
@@ -405,16 +432,19 @@ const ModuleDetailPage: React.FC = () => {
           </CardHeader>
           <CardContent className="h-80">
             <LineChart
+              width={500}
+              height={300}
               data={activity.map((item) => ({
                 date: new Date(item.date).toLocaleDateString(),
                 resourceAccess: item.resourcesAccessed,
               }))}
-              index="date"
-              categories={["resourceAccess"]}
-              colors={["green"]}
-              valueFormatter={(value: any) => `${value} accesses`}
-              yAxisWidth={50}
-            />
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value) => `${value} accesses`} />
+              <Line type="monotone" dataKey="resourceAccess" stroke="green" />
+            </LineChart>
           </CardContent>
         </Card>
       </div>

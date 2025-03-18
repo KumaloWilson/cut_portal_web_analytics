@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { ResponsiveBar } from "@nivo/bar"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "../../components/ui/skeleton"
 
 interface ResourceAccessChartProps {
   data: any

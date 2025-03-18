@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 import { useQuery } from "react-query"
 import { useSocket } from "../contexts/SocketContext"
 import {
@@ -12,19 +11,23 @@ import {
   fetchStudentFacultyStats,
   fetchStudentProgramStats,
 } from "../services/api"
-import LoadingSpinner from "../components/common/LoadingSpinner"
-import ErrorDisplay from "../components/common/ErrorDisplay"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
-import { ResponsiveLine } from "@nivo/line"
-import { ResponsivePie } from "@nivo/pie"
-import { ResponsiveBar } from "@nivo/bar"
-import { ResponsiveCalendar } from "@nivo/calendar"
-import { User, BookOpen, School, Calendar, FileText } from "lucide-react"
-import Header from "../components/navigation/Header"
+import { Button } from "../components/ui/button"
+import { Download, User, BookOpen, School, Calendar, BarChart2, Activity, ArrowLeft } from "lucide-react"
+import LoadingSpinner from "../components/common/LoadingSpinner"
+import ErrorDisplay from "../components/common/ErrorDisplay"
 import { exportToExcel } from "../utils/exportUtils"
+import { Badge } from "../components/ui/badge"
+import Header from "../components/navigation/Header"
+import ActivityTimeline from "../components/dashboard/ActivityTimeLine"
+import ActivityHeatmap from "../components/dashboard/ActivityHeatMap"
+import ResourceAccessChart from "../components/dashboard/ResourceAccessChart"
+import Progress from "../components/common/Progress"
+import StudentEngagementComparison from "../components/student/StudentEngagementComparison"
+import StudentModulesTable from "../components/student/StudentModulesTable"
 
-const StudentDetailPage: React.FC = () => {
+const StudentDetailPage = () => {
   const { studentId } = useParams<{ studentId: string }>()
   const socket = useSocket()
   const [activeTab, setActiveTab] = useState("overview")
@@ -35,6 +38,7 @@ const StudentDetailPage: React.FC = () => {
     isLoading: isLoadingStudent,
     isError: isErrorStudent,
     error: errorStudent,
+    refetch: refetchStudent,
   } = useQuery(["student", studentId], () => fetchStudentById(studentId!), {
     refetchOnWindowFocus: false,
     enabled: !!studentId,
@@ -55,42 +59,45 @@ const StudentDetailPage: React.FC = () => {
   )
 
   // Fetch student modules
-  const { data: modules, isLoading: isLoadingModules } = useQuery(
-    ["studentModules", studentId],
-    () => fetchStudentModules(studentId!),
-    {
-      refetchOnWindowFocus: false,
-      enabled: !!studentId,
-    },
-  )
+  const {
+    data: modules,
+    isLoading: isLoadingModules,
+    refetch: refetchModules,
+  } = useQuery(["studentModules", studentId], () => fetchStudentModules(studentId!), {
+    refetchOnWindowFocus: false,
+    enabled: !!studentId,
+  })
 
   // Fetch student faculty stats
-  const { data: facultyStats, isLoading: isLoadingFacultyStats } = useQuery(
-    ["studentFacultyStats", studentId],
-    () => fetchStudentFacultyStats(studentId!),
-    {
-      refetchOnWindowFocus: false,
-      enabled: !!studentId,
-    },
-  )
+  const {
+    data: facultyStats,
+    isLoading: isLoadingFacultyStats,
+    refetch: refetchFacultyStats,
+  } = useQuery(["studentFacultyStats", studentId], () => fetchStudentFacultyStats(studentId!), {
+    refetchOnWindowFocus: false,
+    enabled: !!studentId,
+  })
 
   // Fetch student program stats
-  const { data: programStats, isLoading: isLoadingProgramStats } = useQuery(
-    ["studentProgramStats", studentId],
-    () => fetchStudentProgramStats(studentId!),
-    {
-      refetchOnWindowFocus: false,
-      enabled: !!studentId,
-    },
-  )
+  const {
+    data: programStats,
+    isLoading: isLoadingProgramStats,
+    refetch: refetchProgramStats,
+  } = useQuery(["studentProgramStats", studentId], () => fetchStudentProgramStats(studentId!), {
+    refetchOnWindowFocus: false,
+    enabled: !!studentId,
+  })
 
   // Listen for real-time updates
   useEffect(() => {
-    if (socket) {
+    if (socket && studentId) {
       socket.on("newEvent", (event) => {
-        // Only refetch if the event is for this student
         if (event.studentId === studentId) {
+          refetchStudent()
           refetchActivity()
+          refetchModules()
+          refetchFacultyStats()
+          refetchProgramStats()
         }
       })
 
@@ -98,7 +105,7 @@ const StudentDetailPage: React.FC = () => {
         socket.off("newEvent")
       }
     }
-  }, [socket, studentId, refetchActivity])
+  }, [socket, studentId, refetchStudent, refetchActivity, refetchModules, refetchFacultyStats, refetchProgramStats])
 
   // Handle export
   const handleExport = () => {
@@ -142,6 +149,8 @@ const StudentDetailPage: React.FC = () => {
               module_code: module.module_code,
               title: module.title,
               enrolled_at: module.enrolled_at,
+              last_accessed_at: module.last_accessed_at,
+              engagement_score: module.engagement_score,
             })),
           },
           {
@@ -157,12 +166,17 @@ const StudentDetailPage: React.FC = () => {
     }
   }
 
-  if (isLoadingStudent) {
+  const isLoading =
+    isLoadingStudent || isLoadingActivity || isLoadingModules || isLoadingFacultyStats || isLoadingProgramStats
+  const isError = isErrorStudent
+  const error = errorStudent
+
+  if (isLoading) {
     return <LoadingSpinner />
   }
 
-  if (isErrorStudent) {
-    return <ErrorDisplay error={errorStudent as Error} />
+  if (isError) {
+    return <ErrorDisplay error={error as Error} />
   }
 
   if (!student) {
@@ -173,150 +187,194 @@ const StudentDetailPage: React.FC = () => {
     <div className="flex flex-col h-full">
       <Header onExport={handleExport} />
 
-      <div className="p-6 bg-gray-50 dark:bg-gray-900 flex-1 overflow-y-auto transition-colors duration-200">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-            {student.first_name} {student.last_name}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">Student ID: {student.student_id}</p>
+      <div className="p-6 flex-1 overflow-y-auto">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Link to="/students" className="text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {student.first_name} {student.last_name}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{student.student_id}</Badge>
+              <Badge variant="secondary">{student.program_code}</Badge>
+            </div>
+          </div>
+
+          <Button onClick={handleExport} className="flex items-center gap-2 w-full md:w-auto">
+            <Download className="h-4 w-4" />
+            Export Data
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="shadow-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 mr-4">
-                  <User className="h-6 w-6" />
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Program</p>
+                  <p className="text-2xl font-bold">{student.program_code}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Program</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{student.program_code}</p>
+                <div className="p-2 rounded-full text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950">
+                  <BookOpen className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-md">
+          <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 mr-4">
-                  <School className="h-6 w-6" />
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Faculty</p>
+                  <p className="text-2xl font-bold">{student.faculty_code}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Faculty</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{student.faculty_code}</p>
+                <div className="p-2 rounded-full text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-950">
+                  <School className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-md">
+          <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 mr-4">
-                  <BookOpen className="h-6 w-6" />
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Level</p>
+                  <p className="text-2xl font-bold">{student.level}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Level</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{student.level}</p>
+                <div className="p-2 rounded-full text-purple-500 dark:text-purple-400 bg-purple-50 dark:bg-purple-950">
+                  <Activity className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-md">
+          <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 mr-4">
-                  <Calendar className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Active</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Last Active</p>
+                  <p className="text-2xl font-bold">
                     {student.last_active_at ? new Date(student.last_active_at).toLocaleDateString() : "Never"}
                   </p>
                 </div>
+                <div className="p-2 rounded-full text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950">
+                  <Calendar className="h-5 w-5" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-4 md:w-[400px]">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="modules">Modules</TabsTrigger>
-            <TabsTrigger value="comparison">Comparison</TabsTrigger>
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span>Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" />
+              <span>Activity</span>
+            </TabsTrigger>
+            <TabsTrigger value="modules" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span>Modules</span>
+            </TabsTrigger>
+            <TabsTrigger value="comparison" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              <span>Comparison</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-md">
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
                 <CardHeader>
                   <CardTitle>Student Information</CardTitle>
                   <CardDescription>Personal and academic details</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                        {student.first_name} {student.last_name}
-                      </dd>
+                      <h3 className="text-lg font-medium mb-2">Personal Information</h3>
+                      <dl className="space-y-2">
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Full Name:</dt>
+                          <dd className="font-medium">
+                            {student.first_name} {student.last_name}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Student ID:</dt>
+                          <dd className="font-medium">{student.student_id}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Email:</dt>
+                          <dd className="font-medium">{student.email || "N/A"}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Phone:</dt>
+                          <dd className="font-medium">{student.phone || "N/A"}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">National ID:</dt>
+                          <dd className="font-medium">{student.national_id || "N/A"}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Date of Birth:</dt>
+                          <dd className="font-medium">
+                            {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : "N/A"}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Gender:</dt>
+                          <dd className="font-medium">{student.gender || "N/A"}</dd>
+                        </div>
+                      </dl>
                     </div>
+
                     <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Student ID</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.student_id}</dd>
+                      <h3 className="text-lg font-medium mb-2">Academic Information</h3>
+                      <dl className="space-y-2">
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Program:</dt>
+                          <dd className="font-medium">{student.program_name || student.program_code}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Faculty:</dt>
+                          <dd className="font-medium">{student.faculty_name || student.faculty_code}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Level:</dt>
+                          <dd className="font-medium">{student.level || "N/A"}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Enrolled Modules:</dt>
+                          <dd className="font-medium">{modules?.length || 0}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Last Active:</dt>
+                          <dd className="font-medium">
+                            {student.last_active_at ? new Date(student.last_active_at).toLocaleDateString() : "Never"}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.email || "N/A"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.phone || "N/A"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">National ID</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.national_id || "N/A"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Date of Birth</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                        {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : "N/A"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Gender</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.gender || "N/A"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Program</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.program_name || "N/A"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Faculty</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.faculty_name || "N/A"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Level</dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.level || "N/A"}</dd>
-                    </div>
-                  </dl>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="shadow-md">
+              <Card>
                 <CardHeader>
                   <CardTitle>Activity Summary</CardTitle>
                   <CardDescription>Overview of student's activity</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {isLoadingActivity ? (
-                    <div className="flex justify-center items-center h-64">
-                      <LoadingSpinner />
-                    </div>
-                  ) : activity ? (
+                  {activity ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
@@ -335,9 +393,9 @@ const StudentDetailPage: React.FC = () => {
                             {activity.eventCounts?.resource_access || 0}
                           </p>
                         </div>
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
                           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Time Spent</p>
-                          <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                             {activity.totalTimeSpentMinutes || 0} min
                           </p>
                         </div>
@@ -348,30 +406,7 @@ const StudentDetailPage: React.FC = () => {
                           Event Distribution
                         </h4>
                         <div className="h-64">
-                          <ResponsivePie
-                            data={Object.entries(activity.eventCounts || {}).map(([key, value]) => ({
-                              id: key,
-                              label: key
-                                .split("_")
-                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                                .join(" "),
-                              value: value as number,
-                            }))}
-                            margin={{ top: 20, right: 80, bottom: 20, left: 80 }}
-                            innerRadius={0.5}
-                            padAngle={0.7}
-                            cornerRadius={3}
-                            activeOuterRadiusOffset={8}
-                            colors={{ scheme: "blues" }}
-                            borderWidth={1}
-                            borderColor={{ from: "color", modifiers: [["darker", 0.2]] }}
-                            arcLinkLabelsSkipAngle={10}
-                            arcLinkLabelsTextColor={{ from: "color", modifiers: [] }}
-                            arcLinkLabelsThickness={2}
-                            arcLinkLabelsColor={{ from: "color" }}
-                            arcLabelsSkipAngle={10}
-                            arcLabelsTextColor={{ from: "color", modifiers: [["darker", 2]] }}
-                          />
+                          <ActivityTimeline data={activity} />
                         </div>
                       </div>
                     </div>
@@ -381,618 +416,301 @@ const StudentDetailPage: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
 
-          <TabsContent value="activity" className="mt-6">
-            <div className="grid grid-cols-1 gap-6">
-              <Card className="shadow-md">
-                <CardHeader>
-                  <CardTitle>Activity Timeline</CardTitle>
-                  <CardDescription>Student activity over time</CardDescription>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Resources Accessed</CardTitle>
+                  <CardDescription>Most accessed resources</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {isLoadingActivity ? (
-                    <div className="flex justify-center items-center h-64">
-                      <LoadingSpinner />
-                    </div>
-                  ) : activity && activity.eventsByDay ? (
-                    <div className="h-96">
-                      <ResponsiveCalendar
-                        data={Object.entries(activity.eventsByDay).map(([day, count]) => ({
-                          day,
-                          value: count as number,
-                        }))}
-                        from={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
-                        to={new Date().toISOString().split("T")[0]}
-                        emptyColor="#eeeeee"
-                        colors={["#caf0f8", "#90e0ef", "#48cae4", "#00b4d8", "#0077b6"]}
-                        margin={{ top: 40, right: 40, bottom: 40, left: 40 }}
-                        yearSpacing={40}
-                        monthBorderColor="#ffffff"
-                        dayBorderWidth={2}
-                        dayBorderColor="#ffffff"
-                        legends={[
-                          {
-                            anchor: "bottom-right",
-                            direction: "row",
-                            translateY: 36,
-                            itemCount: 4,
-                            itemWidth: 42,
-                            itemHeight: 36,
-                            itemsSpacing: 14,
-                            itemDirection: "right-to-left",
-                          },
-                        ]}
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">No activity data available</p>
-                  )}
+                <CardContent className="h-80">
+                  <ResourceAccessChart data={activity} />
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="shadow-md">
-                  <CardHeader>
-                    <CardTitle>Event Types</CardTitle>
-                    <CardDescription>Breakdown of different event types</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingActivity ? (
-                      <div className="flex justify-center items-center h-64">
-                        <LoadingSpinner />
-                      </div>
-                    ) : activity && activity.eventCounts ? (
-                      <div className="h-80">
-                        <ResponsiveBar
-                          data={Object.entries(activity.eventCounts || {}).map(([key, value]) => ({
-                            eventType: key
-                              .split("_")
-                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                              .join(" "),
-                            count: value as number,
-                          }))}
-                          keys={["count"]}
-                          indexBy="eventType"
-                          margin={{ top: 50, right: 50, bottom: 70, left: 60 }}
-                          padding={0.3}
-                          valueScale={{ type: "linear" }}
-                          indexScale={{ type: "band", round: true }}
-                          colors={{ scheme: "blues" }}
-                          borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                          axisTop={null}
-                          axisRight={null}
-                          axisBottom={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: -45,
-                            legend: "Event Type",
-                            legendPosition: "middle",
-                            legendOffset: 50,
-                          }}
-                          axisLeft={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 0,
-                            legend: "Count",
-                            legendPosition: "middle",
-                            legendOffset: -40,
-                          }}
-                          labelSkipWidth={12}
-                          labelSkipHeight={12}
-                          labelTextColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                                                  animate={true}
-            motionConfig="elastic"
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-400 text-center py-8">No event data available</p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-md">
-                  <CardHeader>
-                    <CardTitle>Daily Activity</CardTitle>
-                    <CardDescription>Activity trends over time</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingActivity ? (
-                      <div className="flex justify-center items-center h-64">
-                        <LoadingSpinner />
-                      </div>
-                    ) : activity && activity.eventsByDay ? (
-                      <div className="h-80">
-                        <ResponsiveLine
-                          data={[
-                            {
-                              id: "Activity",
-                              color: "hsl(210, 70%, 50%)",
-                              data: Object.entries(activity.eventsByDay)
-                                .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
-                                .map(([day, count]) => ({
-                                  x: day,
-                                  y: count as number,
-                                })),
-                            },
-                          ]}
-                          margin={{ top: 50, right: 50, bottom: 70, left: 60 }}
-                          xScale={{ type: "point" }}
-                          yScale={{ type: "linear", min: "auto", max: "auto", stacked: false, reverse: false }}
-                          axisTop={null}
-                          axisRight={null}
-                          axisBottom={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: -45,
-                            legend: "Date",
-                            legendOffset: 50,
-                            legendPosition: "middle",
-                          }}
-                          axisLeft={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 0,
-                            legend: "Events",
-                            legendOffset: -40,
-                            legendPosition: "middle",
-                          }}
-                          colors={{ scheme: "blues" }}
-                          pointSize={10}
-                          pointColor={{ theme: "background" }}
-                          pointBorderWidth={2}
-                          pointBorderColor={{ from: "serieColor" }}
-                          pointLabel="y"
-                          pointLabelYOffset={-12}
-                          useMesh={true}
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-400 text-center py-8">No activity data available</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Activity Heatmap</CardTitle>
+                  <CardDescription>Activity patterns by day and hour</CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ActivityHeatmap data={activity} />
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="modules" className="mt-6">
-            <Card className="shadow-md">
+          <TabsContent value="activity" className="space-y-4">
+            <Card>
               <CardHeader>
-                <CardTitle>Enrolled Modules</CardTitle>
-                <CardDescription>Modules the student is currently enrolled in</CardDescription>
+                <CardTitle>Activity Timeline</CardTitle>
+                <CardDescription>Student activity over time</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingModules ? (
-                  <div className="flex justify-center items-center h-64">
-                    <LoadingSpinner />
-                  </div>
-                ) : modules && modules.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-800">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Module Code
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Title
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Enrolled Date
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Last Accessed
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                        {modules.map((module: any, index: number) => (
-                          <tr
-                            key={module.module_id}
-                            className={index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800"}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
-                              {module.module_code || "N/A"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {module.title}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {module.enrolled_at ? new Date(module.enrolled_at).toLocaleDateString() : "N/A"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {module.last_accessed_at
-                                ? new Date(module.last_accessed_at).toLocaleDateString()
-                                : "Never"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-8">No modules found for this student</p>
-                )}
+              <CardContent className="h-96">
+                <ActivityTimeline data={activity} />
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-              <Card className="shadow-md">
-                <CardHeader>
-                  <CardTitle>Module Engagement</CardTitle>
-                  <CardDescription>Activity across different modules</CardDescription>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Activity by Time</CardTitle>
+                  <CardDescription>When student is most active</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {isLoadingActivity || isLoadingModules ? (
-                    <div className="flex justify-center items-center h-64">
-                      <LoadingSpinner />
-                    </div>
-                  ) : activity && modules && modules.length > 0 ? (
-                    <div className="h-80">
-                      <ResponsiveBar
-                        data={modules.slice(0, 10).map((module: any) => {
-                          // Find module-related events in activity data
-                          const moduleEvents = (activity.moduleEvents || []).filter(
-                            (event: any) => event.moduleId === module.module_id,
-                          ).length
-
-                          return {
-                            module: module.module_code || module.title.substring(0, 10),
-                            views: moduleEvents,
-                            resources: Math.floor(moduleEvents * 0.4), // Placeholder data
-                            exams: Math.floor(moduleEvents * 0.2), // Placeholder data
-                          }
-                        })}
-                        keys={["views", "resources", "exams"]}
-                        indexBy="module"
-                        margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
-                        padding={0.3}
-                        groupMode="grouped"
-                        valueScale={{ type: "linear" }}
-                        indexScale={{ type: "band", round: true }}
-                        colors={["#0077b6", "#00b4d8", "#90e0ef"]}
-                        borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{
-                          tickSize: 5,
-                          tickPadding: 5,
-                          tickRotation: -45,
-                          legend: "Module",
-                          legendPosition: "middle",
-                          legendOffset: 40,
-                        }}
-                        axisLeft={{
-                          tickSize: 5,
-                          tickPadding: 5,
-                          tickRotation: 0,
-                          legend: "Activity Count",
-                          legendPosition: "middle",
-                          legendOffset: -40,
-                        }}
-                        labelSkipWidth={12}
-                        labelSkipHeight={12}
-                        labelTextColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                        legends={[
-                          {
-                            dataFrom: "keys",
-                            anchor: "bottom-right",
-                            direction: "column",
-                            justify: false,
-                            translateX: 120,
-                            translateY: 0,
-                            itemsSpacing: 2,
-                            itemWidth: 100,
-                            itemHeight: 20,
-                            itemDirection: "left-to-right",
-                            itemOpacity: 0.85,
-                            symbolSize: 20,
-                            effects: [
-                              {
-                                on: "hover",
-                                style: {
-                                  itemOpacity: 1,
-                                },
-                              },
-                            ],
-                          },
-                        ]}
-                        animate={true}
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                      No module engagement data available
-                    </p>
-                  )}
+                <CardContent className="h-80">
+                  <ActivityHeatmap data={activity} />
                 </CardContent>
               </Card>
 
-              <Card className="shadow-md">
-                <CardHeader>
-                  <CardTitle>Past Exam Paper Access</CardTitle>
-                  <CardDescription>Past exam papers accessed by the student</CardDescription>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Activity by Type</CardTitle>
+                  <CardDescription>Types of student activities</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {isLoadingActivity ? (
-                    <div className="flex justify-center items-center h-64">
-                      <LoadingSpinner />
-                    </div>
-                  ) : activity && activity.pastExamAccesses && activity.pastExamAccesses.length > 0 ? (
-                    <div className="overflow-y-auto max-h-80">
-                      <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {activity.pastExamAccesses.map((access: any, index: number) => (
-                          <li key={index} className="py-4">
-                            <div className="flex items-start">
-                              <div className="flex-shrink-0">
-                                <FileText className="h-6 w-6 text-blue-500 dark:text-blue-400" />
-                              </div>
-                              <div className="ml-3">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {access.description || "Unnamed Exam Paper"}
-                                </p>
-                                <div className="flex space-x-4 mt-1">
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    <span className="font-medium">Module:</span> {access.module_code || "Unknown"}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    <span className="font-medium">Year:</span> {access.year || "Unknown"}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    <span className="font-medium">Accessed:</span>{" "}
-                                    {new Date(access.timestamp).toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                      No past exam paper access data available
-                    </p>
-                  )}
+                <CardContent className="h-80">
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Activity types visualization
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Time Spent</CardTitle>
+                  <CardDescription>Time spent on different modules</CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Time spent visualization
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="comparison" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-md">
-                <CardHeader>
+          <TabsContent value="modules" className="space-y-4">
+            <StudentModulesTable modules={modules} studentId={""} />
+          </TabsContent>
+
+          <TabsContent value="comparison" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
                   <CardTitle>Faculty Comparison</CardTitle>
-                  <CardDescription>How this student compares to others in the same faculty</CardDescription>
+                  <CardDescription>Compared to faculty peers</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {isLoadingFacultyStats ? (
-                    <div className="flex justify-center items-center h-64">
-                      <LoadingSpinner />
-                    </div>
-                  ) : facultyStats ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Faculty</p>
-                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                            {facultyStats.facultyName}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{facultyStats.facultyCode}</p>
-                        </div>
-                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Students</p>
-                          <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                            {facultyStats.totalStudents}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Activity Ranking</h4>
-                        <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-blue-600 dark:bg-blue-500 h-full"
-                            style={{
-                              width: `${facultyStats.studentRank ? (facultyStats.studentRank / facultyStats.totalStudents) * 100 : 0}%`,
-                            }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Rank {facultyStats.studentRank || "N/A"} of {facultyStats.totalStudents} students
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Your Events</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {activity?.totalEvents || 0}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Faculty Average</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {Math.round(facultyStats.averageEvents || 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Faculty Max</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {facultyStats.maxEvents || 0}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="h-64">
-                        <ResponsiveBar
-                          data={[
-                            {
-                              category: "Your Activity",
-                              value: activity?.totalEvents || 0,
-                            },
-                            {
-                              category: "Faculty Min",
-                              value: facultyStats.minEvents || 0,
-                            },
-                            {
-                              category: "Faculty Avg",
-                              value: Math.round(facultyStats.averageEvents || 0),
-                            },
-                            {
-                              category: "Faculty Max",
-                              value: facultyStats.maxEvents || 0,
-                            },
-                          ]}
-                          keys={["value"]}
-                          indexBy="category"
-                          margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
-                          padding={0.3}
-                          valueScale={{ type: "linear" }}
-                          indexScale={{ type: "band", round: true }}
-                          colors={({ data }) => (data.category === "Your Activity" ? "#0077b6" : "#90e0ef")}
-                          borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                          axisTop={null}
-                          axisRight={null}
-                          axisBottom={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 0,
-                            legend: "Category",
-                            legendPosition: "middle",
-                            legendOffset: 32,
-                          }}
-                          axisLeft={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 0,
-                            legend: "Events",
-                            legendPosition: "middle",
-                            legendOffset: -40,
-                          }}
-                          labelSkipWidth={12}
-                          labelSkipHeight={12}
-                          labelTextColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-                          animate={true}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                      No faculty comparison data available
-                    </p>
+                <CardContent className="h-80">
+                  {facultyStats && (
+                  <StudentEngagementComparison
+                    studentData={{
+                    studentId: studentId || '',
+                    studentName: `${student.first_name} ${student.last_name}`,
+                    metrics: {
+                      pageViews: facultyStats.studentMetrics?.pageViews || 0,
+                      timeSpentMinutes: facultyStats.studentMetrics?.timeSpentMinutes || 0,
+                      resourcesAccessed: facultyStats.studentMetrics?.resourcesAccessed || 0,
+                      quizAttempts: facultyStats.studentMetrics?.quizAttempts || 0,
+                      forumPosts: facultyStats.studentMetrics?.forumPosts || 0,
+                      assignmentSubmissions: facultyStats.studentMetrics?.assignmentSubmissions || 0,
+                    },
+                    dailyActivity: facultyStats.dailyActivity || [],
+                    modulePerformance: facultyStats.modulePerformance || []
+                    }}
+                    classAverages={facultyStats.classAverages || {
+                    pageViews: 0,
+                    timeSpentMinutes: 0,
+                    resourcesAccessed: 0,
+                    quizAttempts: 0,
+                    forumPosts: 0,
+                    assignmentSubmissions: 0
+                    }}
+                    programAverages={facultyStats.programAverages || {
+                    pageViews: 0,
+                    timeSpentMinutes: 0,
+                    resourcesAccessed: 0,
+                    quizAttempts: 0,
+                    forumPosts: 0,
+                    assignmentSubmissions: 0
+                    }}
+                  />
                   )}
                 </CardContent>
               </Card>
 
-              <Card className="shadow-md">
-                <CardHeader>
+              <Card>
+                <CardHeader className="pb-2">
                   <CardTitle>Program Comparison</CardTitle>
-                  <CardDescription>How this student compares to others in the same program</CardDescription>
+                  <CardDescription>Compared to program peers</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {isLoadingProgramStats ? (
-                    <div className="flex justify-center items-center h-64">
-                      <LoadingSpinner />
-                    </div>
-                  ) : programStats ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Program</p>
-                          <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                            {programStats.programName}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{programStats.programCode}</p>
-                        </div>
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Level</p>
-                          <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{programStats.level}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {programStats.sameLevelStudents} students
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Program Ranking</h4>
-                        <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-4 overflow-hidden">
-                          <div
-                            className="bg-purple-600 dark:bg-purple-500 h-full"
-                            style={{
-                              width: `${programStats.studentRank ? (programStats.studentRank / programStats.totalStudents) * 100 : 0}%`,
-                            }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Rank {programStats.studentRank || "N/A"} of {programStats.totalStudents} students in program
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Your Events</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {activity?.totalEvents || 0}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Program Average</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {Math.round(programStats.averageEvents || 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Program Max</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {programStats.maxEvents || 0}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="h-64">
-                        <ResponsivePie
-                          data={[
-                            {
-                              id: "Your Activity",
-                              label: "Your Activity",
-                              value: activity?.totalEvents || 0,
-                              color: "#0077b6",
-                            },
-                            {
-                              id: "Program Average",
-                              label: "Program Average",
-                              value: Math.round(programStats.averageEvents || 0),
-                              color: "#00b4d8",
-                            },
-                          ]}
-                          margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-                          innerRadius={0.5}
-                          padAngle={0.7}
-                          cornerRadius={3}
-                          activeOuterRadiusOffset={8}
-                          colors={{ datum: "data.color" }}
-                          borderWidth={1}
-                          borderColor={{ from: "color", modifiers: [["darker", 0.2]] }}
-                          arcLinkLabelsSkipAngle={10}
-                          arcLinkLabelsTextColor={{ from: "color", modifiers: [] }}
-                          arcLinkLabelsThickness={2}
-                          arcLinkLabelsColor={{ from: "color" }}
-                          arcLabelsSkipAngle={10}
-                          arcLabelsTextColor={{ from: "color", modifiers: [["darker", 2]] }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                      No program comparison data available
-                    </p>
+                <CardContent className="h-80">
+                  {programStats && (
+                    <StudentEngagementComparison
+                      studentData={{
+                        studentId: studentId || '',
+                        studentName: `${student.first_name} ${student.last_name}`,
+                        metrics: {
+                          pageViews: programStats.studentMetrics?.pageViews || 0,
+                          timeSpentMinutes: programStats.studentMetrics?.timeSpentMinutes || 0,
+                          resourcesAccessed: programStats.studentMetrics?.resourcesAccessed || 0,
+                          quizAttempts: programStats.studentMetrics?.quizAttempts || 0,
+                          forumPosts: programStats.studentMetrics?.forumPosts || 0,
+                          assignmentSubmissions: programStats.studentMetrics?.assignmentSubmissions || 0,
+                        },
+                        dailyActivity: programStats.dailyActivity || [],
+                        modulePerformance: programStats.modulePerformance || []
+                      }}
+                      classAverages={programStats.classAverages || {
+                        pageViews: 0,
+                        timeSpentMinutes: 0,
+                        resourcesAccessed: 0,
+                        quizAttempts: 0,
+                        forumPosts: 0,
+                        assignmentSubmissions: 0
+                      }}
+                      programAverages={programStats.programAverages || {
+                        pageViews: 0,
+                        timeSpentMinutes: 0,
+                        resourcesAccessed: 0,
+                        quizAttempts: 0,
+                        forumPosts: 0,
+                        assignmentSubmissions: 0
+                      }}
+                    />
                   )}
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Engagement Metrics</CardTitle>
+                <CardDescription>Detailed comparison with peers</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Faculty Metrics</h3>
+                    {facultyStats && (
+                      <div className="space-y-4">
+                        <div>
+                          <Progress
+                          title="Faculty Ranking"
+                          description="Student's rank within faculty"
+                          metrics={[
+                            {
+                            name: "Activity Rank",
+                            value: facultyStats.studentRank,
+                            target: facultyStats.totalStudents,
+                            unit: "rank",
+                            trend: "stable",
+                            history: [
+                              {
+                              date: new Date().toLocaleDateString(),
+                              value: facultyStats.studentRank
+                              }
+                            ]
+                            }
+                          ]}
+                          />
+                        </div>
+
+                        <div>
+                          <Progress
+                          title="Activity Events"
+                          description="Student's events compared to faculty average"
+                          metrics={[
+                            {
+                            name: "Events",
+                            value: activity?.totalEvents || 0,
+                            target: facultyStats.maxEvents,
+                            unit: "events",
+                            trend: "stable",
+                            history: [
+                              {
+                              date: new Date().toLocaleDateString(),
+                              value: activity?.totalEvents || 0
+                              }
+                            ]
+                            }
+                          ]}
+                          />
+                        </div>
+
+                        <div className="pt-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Faculty: {facultyStats.facultyName}</span>
+                            <span>{facultyStats.totalStudents} students</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Program Metrics</h3>
+                    {programStats && (
+                      <div className="space-y-4">
+                        <div>
+                          <Progress
+                          title="Program Ranking"
+                          description="Student's rank within program"
+                          metrics={[
+                            {
+                            name: "Program Rank",
+                            value: programStats.studentRank,
+                            target: programStats.totalStudents,
+                            unit: "rank",
+                            trend: "stable",
+                            history: [
+                              {
+                              date: new Date().toLocaleDateString(),
+                              value: programStats.studentRank
+                              }
+                            ]
+                            }
+                          ]}
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm font-medium">Events</span>
+                            <span className="text-sm text-muted-foreground">
+                              {activity?.totalEvents || 0} vs avg {Math.round(programStats.averageEvents)}
+                            </span>
+                          </div>
+                          <Progress
+                            title="Activity Events"
+                            metrics={[
+                              {
+                                name: "Progress",
+                                value: activity?.totalEvents || 0,
+                                target: programStats.maxEvents,
+                                unit: "events",
+                                trend: "stable",
+                                history: [
+                                  {
+                                    date: new Date().toLocaleDateString(),
+                                    value: activity?.totalEvents || 0
+                                  }
+                                ]
+                              }
+                            ]}
+                          />
+                        </div>
+
+                        <div className="pt-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Level: {programStats.level}</span>
+                            <span>{programStats.sameLevelStudents} students</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

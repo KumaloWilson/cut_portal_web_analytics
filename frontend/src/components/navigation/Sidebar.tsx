@@ -1,109 +1,191 @@
 "use client"
 
-import type React from "react"
 import { NavLink } from "react-router-dom"
-import { BarChart2, List, Users, BookOpen, School, Settings, Moon, Sun, Laptop } from "lucide-react"
 import { useTheme } from "../../contexts/ThemeContext"
+import { BarChart2, List, Users, BookOpen, School, Settings, Moon, Sun, Laptop, FileText, LogOut } from "lucide-react"
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarSeparator,
+} from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-const Sidebar: React.FC = () => {
+export default function SidebarComponent() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="w-64 bg-white dark:bg-gray-800 shadow-md hidden md:flex md:flex-col transition-colors duration-200">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-bold text-gray-800 dark:text-white">CUT Analytics</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">eLearning Portal Insights</p>
-      </div>
-
-      <nav className="mt-6 flex-1">
-        <NavItem to="/" icon={<BarChart2 size={20} />} label="Dashboard" />
-        <NavItem to="/events" icon={<List size={20} />} label="Event Logs" />
-        <NavItem to="/students" icon={<Users size={20} />} label="Students" />
-        <NavItem to="/modules" icon={<BookOpen size={20} />} label="Modules" />
-        <NavItem to="/faculties" icon={<School size={20} />} label="Faculties" />
-        <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" />
-      </nav>
-
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setTheme("light")}
-              className={`p-2 rounded-md ${
-                theme === "light"
-                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
-              aria-label="Light mode"
-            >
-              <Sun size={18} />
-            </button>
-            <button
-              onClick={() => setTheme("dark")}
-              className={`p-2 rounded-md ${
-                theme === "dark"
-                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
-              aria-label="Dark mode"
-            >
-              <Moon size={18} />
-            </button>
-            <button
-              onClick={() => setTheme("system")}
-              className={`p-2 rounded-md ${
-                theme === "system"
-                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
-              aria-label="System preference"
-            >
-              <Laptop size={18} />
-            </button>
+    <Sidebar variant="floating" collapsible="icon">
+      <SidebarHeader>
+        <div className="flex items-center gap-2 px-2 py-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
+            <span className="text-sm font-bold text-primary-foreground">CUT</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">CUT Analytics</span>
+            <span className="text-xs text-muted-foreground">eLearning Portal</span>
           </div>
         </div>
-      </div>
+      </SidebarHeader>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-            <span className="text-blue-600 dark:text-blue-300 font-semibold">CUT</span>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-800 dark:text-white">Admin User</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Analytics Dashboard</p>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Analytics</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Dashboard">
+                <NavLink to="/" end>
+                  <BarChart2 className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Events">
+                <NavLink to="/events">
+                  <List className="h-4 w-4" />
+                  <span>Event Logs</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Students">
+                <NavLink to="/students">
+                  <Users className="h-4 w-4" />
+                  <span>Students</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Modules">
+                <NavLink to="/modules">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Modules</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Faculties">
+                <NavLink to="/faculties">
+                  <School className="h-4 w-4" />
+                  <span>Faculties</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Reports</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Reports">
+                <NavLink to="/reports">
+                  <FileText className="h-4 w-4" />
+                  <span>Reports</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Preferences</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Settings">
+                <NavLink to="/settings">
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <div className="px-3 py-2">
+          <TooltipProvider>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-xs font-medium text-muted-foreground">Theme</span>
+              <div className="flex space-x-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setTheme("light")}
+                      variant={theme === "light" ? "default" : "ghost"}
+                      size="icon"
+                      className="h-7 w-7"
+                    >
+                      <Sun className="h-4 w-4" />
+                      <span className="sr-only">Light</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Light</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setTheme("dark")}
+                      variant={theme === "dark" ? "default" : "ghost"}
+                      size="icon"
+                      className="h-7 w-7"
+                    >
+                      <Moon className="h-4 w-4" />
+                      <span className="sr-only">Dark</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Dark</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setTheme("system")}
+                      variant={theme === "system" ? "default" : "ghost"}
+                      size="icon"
+                      className="h-7 w-7"
+                    >
+                      <Laptop className="h-4 w-4" />
+                      <span className="sr-only">System</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>System</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          </TooltipProvider>
+
+          <div className="flex items-center gap-3 rounded-md border p-3">
+            <Avatar>
+              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
+              <AvatarFallback>AD</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Admin User</span>
+              <span className="text-xs text-muted-foreground">admin@cut.ac.zw</span>
+            </div>
+            <Button variant="ghost" size="icon" className="ml-auto h-8 w-8">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   )
 }
-
-interface NavItemProps {
-  to: string
-  icon: React.ReactNode
-  label: string
-}
-
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label }) => {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 ${
-          isActive
-            ? "bg-blue-50 text-blue-600 border-r-4 border-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-400"
-            : ""
-        }`
-      }
-      end
-    >
-      <span className="mr-3">{icon}</span>
-      <span>{label}</span>
-    </NavLink>
-  )
-}
-
-export default Sidebar
 

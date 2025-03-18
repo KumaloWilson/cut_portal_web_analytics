@@ -2,18 +2,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ResponsivePie } from "@nivo/pie"
 import { Skeleton } from "@/components/ui/skeleton"
 
-interface FacultyDistributionChartProps {
+interface EventDistributionChartProps {
   data: any
-  isLoading: boolean
 }
 
-export default function FacultyDistributionChart({ data, isLoading }: FacultyDistributionChartProps) {
-  if (isLoading || !data) {
+export default function EventDistributionChart({ data }: EventDistributionChartProps) {
+  if (!data) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Faculty Distribution</CardTitle>
-          <CardDescription>Students by faculty</CardDescription>
+          <CardTitle>Event Distribution</CardTitle>
+          <CardDescription>Breakdown of event types</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
           <Skeleton className="h-full w-full" />
@@ -23,23 +22,20 @@ export default function FacultyDistributionChart({ data, isLoading }: FacultyDis
   }
 
   // Process data for the chart
-  const chartData =
-    data.faculties?.map((faculty: any) => ({
-      id: faculty.faculty_code,
-      label: faculty.faculty_name,
-      value: faculty.student_count,
-    })) || []
-
-  // If no data, show placeholder
-  if (chartData.length === 0) {
-    chartData.push({ id: "No Data", label: "No Data", value: 1 })
-  }
+  const chartData = Object.entries(data).map(([key, value]) => ({
+    id: key,
+    label: key
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" "),
+    value: value as number,
+  }))
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Faculty Distribution</CardTitle>
-        <CardDescription>Students by faculty</CardDescription>
+        <CardTitle>Event Distribution</CardTitle>
+        <CardDescription>Breakdown of event types</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
         <ResponsivePie
@@ -63,7 +59,26 @@ export default function FacultyDistributionChart({ data, isLoading }: FacultyDis
             from: "color",
             modifiers: [["darker", 2]],
           }}
-          colors={{ scheme: "nivo" }}
+          defs={[
+            {
+              id: "dots",
+              type: "patternDots",
+              background: "inherit",
+              color: "rgba(255, 255, 255, 0.3)",
+              size: 4,
+              padding: 1,
+              stagger: true,
+            },
+            {
+              id: "lines",
+              type: "patternLines",
+              background: "inherit",
+              color: "rgba(255, 255, 255, 0.3)",
+              rotation: -45,
+              lineWidth: 6,
+              spacing: 10,
+            },
+          ]}
           legends={[
             {
               anchor: "right",

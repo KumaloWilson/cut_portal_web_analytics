@@ -7,13 +7,13 @@ import { Button } from "../components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { LoadingSpinner } from "../components/common/LoadingSpinner"
-import { ErrorDisplay } from "../components/common/ErrorDisplay"
-import { DateRangePicker } from "../components/common/DateRangePicker"
-import { BarChart, PieChart } from "../components/ui/chart"
+import  LoadingSpinner  from "../components/common/LoadingSpinner"
+import  ErrorDisplay  from "../components/common/ErrorDisplay"
+import  DateRangePicker  from "../components/common/DateRangePicker"
 import { fetchFacultyStats, fetchProgramStats } from "../services/api"
-import { exportToExcel, exportToCsv, exportToPdf } from "../utils/exportUtils"
-import { Download, Users, BookOpen, GraduationCap } from "lucide-react"
+import { exportToExcel, exportToCSV, exportToPDF } from "../utils/exportUtils"
+import { Download, Users, BookOpen, GraduationCap, } from "lucide-react"
+import { Bar, BarChart, Tooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 
 const FacultiesPage: React.FC = () => {
   const [facultyStats, setFacultyStats] = useState<any[]>([])
@@ -38,7 +38,7 @@ const FacultiesPage: React.FC = () => {
 
         setLoading(false)
       } catch (err) {
-        setError("Failed to fetch faculty data")
+        setError(new Error("Failed to fetch faculty data").message)
         setLoading(false)
         console.error(err)
       }
@@ -60,11 +60,11 @@ const FacultiesPage: React.FC = () => {
     const fileName = "faculties-report"
 
     if (type === "excel") {
-      exportToExcel(data, fileName)
+      exportToExcel([{ sheetName: "Faculties", data }], fileName)
     } else if (type === "csv") {
-      exportToCsv(data, fileName)
+      exportToCSV(data, fileName)
     } else if (type === "pdf") {
-      exportToPdf(data, fileName, "Faculties Report")
+      exportToPDF(data, fileName, "Faculties Report")
     }
   }
 
@@ -84,7 +84,7 @@ const FacultiesPage: React.FC = () => {
   if (error) {
     return (
       <div className="container mx-auto py-12">
-        <ErrorDisplay message={error} />
+        <ErrorDisplay error={new Error(error)} />
       </div>
     )
   }
@@ -153,12 +153,14 @@ const FacultiesPage: React.FC = () => {
             <CardContent className="h-80">
               <BarChart
                 data={facultyStudentData}
-                index="name"
-                categories={["value"]}
-                colors={["blue"]}
-                valueFormatter={(value) => `${value} students`}
-                yAxisWidth={60}
-              />
+                width={500}
+                height={300}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} students`} />
+                <Bar dataKey="value" fill="blue" />
+              </BarChart>
             </CardContent>
           </Card>
 
@@ -169,12 +171,14 @@ const FacultiesPage: React.FC = () => {
             <CardContent className="h-80">
               <BarChart
                 data={facultyModuleData}
-                index="name"
-                categories={["value"]}
-                colors={["green"]}
-                valueFormatter={(value) => `${value} modules`}
-                yAxisWidth={60}
-              />
+                width={500}
+                height={300}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} modules`} />
+                <Bar dataKey="value" fill="green" />
+              </BarChart>
             </CardContent>
           </Card>
         </div>
@@ -185,13 +189,21 @@ const FacultiesPage: React.FC = () => {
           </CardHeader>
           <CardContent className="h-80 flex justify-center items-center">
             <div className="w-full h-full max-w-xs">
-              <PieChart
-                data={activityData}
-                index="name"
-                categories={["value"]}
-                colors={["blue", "green", "yellow"]}
-                valueFormatter={(value) => `${value} faculties`}
-              />
+              <PieChart width={400} height={300}>
+                <Pie
+                  data={activityData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                >
+                  {activityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={["blue", "green", "yellow"][index]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `${value} faculties`} />
+              </PieChart>
             </div>
           </CardContent>
         </Card>
@@ -313,19 +325,20 @@ const FacultiesPage: React.FC = () => {
             </CardHeader>
             <CardContent className="h-80">
               <BarChart
+                width={500}
+                height={300}
                 data={programStats
                   .sort((a, b) => b.studentCount - a.studentCount)
                   .slice(0, 10)
                   .map((program) => ({
                     name: program.programCode,
                     value: program.studentCount,
-                  }))}
-                index="name"
-                categories={["value"]}
-                colors={["blue"]}
-                valueFormatter={(value) => `${value} students`}
-                yAxisWidth={60}
-              />
+                  }))}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} students`} />
+                <Bar dataKey="value" fill="blue" />
+              </BarChart>
             </CardContent>
           </Card>
         )}
@@ -346,6 +359,8 @@ const FacultiesPage: React.FC = () => {
               console.log("Date range selected:", range)
               // You can implement date filtering here if needed
             }}
+            startDate={new Date()}
+            endDate={new Date()}
           />
           <Button variant="outline" onClick={() => handleExport("excel")}>
             <Download className="h-4 w-4 mr-2" />

@@ -1,406 +1,156 @@
-import { EventType, type TrackingEvent } from "../types/events"
+import type { TrackingEvent, AnalyticsData } from "./types"
+import {
+  generateSessionId,
+  extractStudentProfile,
+  extractModules,
+  getCurrentPageInfo,
+  getTimeDifference,
+} from "./utils"
 
-// Declare chrome if it's not available in the current environment (e.g., testing)
+// Initialize analytics data
+let analyticsData: AnalyticsData = {
+  current_session: {
+    session_id: "",
+    start_time: "",
+    last_activity: "",
+    is_active: false,
+    pages_visited: 0,
+    total_time_spent: 0,
+  },
+  events: [],
+}
+
+// API endpoint
+const API_ENDPOINT = "http://localhost:3000/api"
+
+// Declare chrome if it's not available globally
 declare const chrome: any
 
-class ContentTracker {
-  private readonly API_URL = "http://localhost:3000/api"
-  private isTracking = true
-  private sessionStartTime: number
-  private lastActivityTime: number
-  private userId: string | null = null
-  private studentId: string | null = null
-  private sessionId: string | null = null
-  private moduleId: string | null = null
-  private deviceInfo: any = {}
-  private browserInfo: any = {}
-  private studentData: any = null
+// Initialize tracking
+function initializeTracking() {
+  // Check if we already have a session
+  chrome.storage.local.get(["analyticsData"], (result: { analyticsData: AnalyticsData }) => {
+    if (result.analyticsData) {
+      analyticsData = result.analyticsData
 
-  constructor() {
-    this.sessionStartTime = Date.now()
-    this.lastActivityTime = this.sessionStartTime
-    this.initializeTracking()
-  }
+      // Check if session is still valid (less than 30 minutes old)
+      const lastActivity = new Date(analyticsData.current_session.last_activity)
+      const now = new Date()
+      const timeDiff = (now.getTime() - lastActivity.getTime()) / (1000 * 60) // in minutes
 
-  private async initializeTracking(): Promise<void> {
-    // Collect device and browser information
-    this.collectDeviceInfo()
-
-    // Check if tracking is enabled
-    chrome.storage.local.get(["tracking", "userId", "sessionId"], (result: { tracking: boolean; userId: null; sessionId: string }) => {
-      this.isTracking = result.tracking !== false
-      this.userId = result.userId || null
-      this.sessionId = result.sessionId || this.generateSessionId()
-
-      // Store session ID
-      chrome.storage.local.set({ sessionId: this.sessionId })
-
-      if (this.isTracking) {
-        this.setupEventListeners()
-        this.trackPageView()
-        this.extractUserInfo()
-        this.extractModuleInfo()
-        this.extractStudentDataFromLocalStorage()
+      if (timeDiff > 30 || !analyticsData.current_session.is_active) {
+        // Create new session
+        createNewSession()
+      } else {
+        // Update last activity
+        analyticsData.current_session.last_activity = new Date().toISOString()
+        analyticsData.current_session.pages_visited++
+        saveAnalyticsData()
       }
-    })
-  }
-
-  private collectDeviceInfo(): void {
-    // Collect device information
-    this.deviceInfo = {
-      screenWidth: window.screen.width,
-      screenHeight: window.screen.height,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      pixelRatio: window.devicePixelRatio,
-      platform: navigator.platform,
-      language: navigator.language,
+    } else {
+      // Create new session
+      createNewSession()
     }
 
-    // Collect browser information
-    this.browserInfo = {
-      userAgent: navigator.userAgent,
-      vendor: navigator.vendor,
-      cookieEnabled: navigator.cookieEnabled,
-    }
+    // Track page view
+    trackEvent("page_view")
+  })
+}
+
+// Create a new session
+function createNewSession() {
+  const sessionId = generateSessionId()
+  const now = new Date().toISOString()
+
+  analyticsData = {
+    student: extractStudentProfile() || undefined,
+    modules: extractModules(),
+    current_session: {
+      session_id: sessionId,
+      student_id: analyticsData.student?.student_id,
+      start_time: now,
+      last_activity: now,
+      is_active: true,
+      pages_visited: 1,
+      total_time_spent: 0,
+    },
+    events: [],
   }
 
-  private generateSessionId(): string {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0,
-        v = c == "x" ? r : (r & 0x3) | 0x8
-      return v.toString(16)
-    })
+  saveAnalyticsData()
+
+  // Send session start to API
+  sendToAPI("/sessions", {
+    session_id: sessionId,
+    student_id: analyticsData.student?.student_id,
+    start_time: now,
+    user_agent: navigator.userAgent,
+  })
+}
+
+// Track an event
+function trackEvent(eventType: string, details: Record<string, any> = {}) {
+  const { path, title } = getCurrentPageInfo()
+  const timestamp = new Date().toISOString()
+
+  const event: TrackingEvent = {
+    event_type: eventType,
+    url: window.location.href,
+    path,
+    page_title: title,
+    timestamp,
+    session_id: analyticsData.current_session.session_id,
+    student_id: analyticsData.student?.student_id,
+    details,
   }
 
-  private extractStudentDataFromLocalStorage(): void {
-    try {
-      // Try to get student data from localStorage
-      const studentData = localStorage.getItem("currentStudent")
+  // Add to local events
+  analyticsData.events.push(event)
 
-      if (studentData) {
-        this.studentData = JSON.parse(studentData)
-
-        // Extract student ID and other relevant information
-        if (this.studentData?.profile?.student_id) {
-          this.studentId = this.studentData.profile.student_id
-
-          // Send student data to background script
-          chrome.runtime.sendMessage({
-            action: "updateStudentInfo",
-            studentId: this.studentId,
-            studentData: this.studentData,
-          })
-
-          // Track login event if student ID is found
-          this.trackEvent(EventType.LOGIN, {
-            method: "localStorage",
-            studentId: this.studentId,
-            programCode: this.studentData?.registration?.program?.programme_code || null,
-            facultyCode: this.studentData?.registration?.program?.faculty_code || null,
-            level: this.studentData?.registration?.program?.level || null,
-          })
-        }
-      }
-    } catch (error) {
-      console.error("Error extracting student data from localStorage:", error)
-    }
+  // Update session data
+  analyticsData.current_session.last_activity = timestamp
+  if (analyticsData.current_session.start_time) {
+    analyticsData.current_session.total_time_spent = getTimeDifference(
+      analyticsData.current_session.start_time,
+      timestamp,
+    )
   }
 
-  private extractUserInfo(): void {
-    // Try to extract user information from the page
-    const usernameElement = document.querySelector(".username, .user-name") as HTMLElement
-    if (usernameElement && usernameElement.textContent) {
-      const username = usernameElement.textContent.trim()
-      chrome.storage.local.set({ userId: username })
-      this.userId = username
+  saveAnalyticsData()
 
-      // Track login event if user ID is found
-      if (this.userId) {
-        this.trackEvent(EventType.LOGIN, {
-          method: "auto",
-        })
-      }
-    }
+  // Send to API immediately for real-time tracking
+  chrome.runtime.sendMessage({
+    type: "track_event",
+    event: event,
+  })
+}
 
-    // Try to extract additional user information
-    const userEmailElement = document.querySelector(".user-email") as HTMLElement
-    const userRoleElement = document.querySelector(".user-role") as HTMLElement
+// Save analytics data to chrome storage
+function saveAnalyticsData() {
+  chrome.storage.local.set({ analyticsData })
+}
 
-    const userInfo: any = {}
+// Send data to API
+function sendToAPI(endpoint: string, data: any) {
+  fetch(`${API_ENDPOINT}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  }).catch((error) => {
+    console.error("Error sending data to API:", error)
+    // Store failed requests for later retry
+    const failedRequests = JSON.parse(localStorage.getItem("failedRequests") || "[]")
+    failedRequests.push({ endpoint, data, timestamp: new Date().toISOString() })
+    localStorage.setItem("failedRequests", JSON.stringify(failedRequests))
+  })
+}
 
-    if (userEmailElement && userEmailElement.textContent) {
-      userInfo.email = userEmailElement.textContent.trim()
-    }
-
-    if (userRoleElement && userRoleElement.textContent) {
-      userInfo.role = userRoleElement.textContent.trim()
-    }
-
-    if (Object.keys(userInfo).length > 0 && this.userId) {
-      // Send user info to background script to store in database
-      chrome.runtime.sendMessage({
-        action: "updateUserInfo",
-        userId: this.userId,
-        userInfo,
-      })
-    }
-  }
-
-  private extractModuleInfo(): void {
-    // Try to extract module information from the URL or page content
-    const moduleIdMatch = window.location.pathname.match(/\/module\/([^/]+)/)
-    if (moduleIdMatch && moduleIdMatch[1]) {
-      this.moduleId = moduleIdMatch[1]
-
-      // Try to extract module title
-      const moduleTitleElement = document.querySelector(".module-title, h1") as HTMLElement
-      let moduleTitle = ""
-
-      if (moduleTitleElement && moduleTitleElement.textContent) {
-        moduleTitle = moduleTitleElement.textContent.trim()
-      }
-
-      // Send module info to background script
-      chrome.runtime.sendMessage({
-        action: "updateModuleInfo",
-        moduleId: this.moduleId,
-        moduleInfo: {
-          title: moduleTitle,
-          url: window.location.href,
-        },
-      })
-    }
-
-    // Check if we're on the modules page and extract modules list
-    if (window.location.href.includes("/modules") || window.location.href.includes("/#/modules")) {
-      // Try to extract modules from the page or localStorage
-      if (this.studentData?.registration?.modules) {
-        const modules = this.studentData.registration.modules
-
-        // Send modules info to background script
-        chrome.runtime.sendMessage({
-          action: "updateModulesList",
-          studentId: this.studentId,
-          modules: modules,
-        })
-      }
-    }
-  }
-
-  private setupEventListeners(): void {
-    // Track clicks
-    document.addEventListener("click", this.handleClick.bind(this))
-
-    // Track form submissions
-    document.addEventListener("submit", this.handleFormSubmit.bind(this))
-
-    // Track resource access
-    this.setupResourceTracking()
-
-    // Track video interactions
-    this.setupVideoTracking()
-
-    // Track quiz attempts
-    this.setupQuizTracking()
-
-    // Track past exam paper downloads
-    this.setupPastExamPaperTracking()
-
-    // Track payment interactions
-    this.setupPaymentTracking()
-
-    // Track results viewing
-    this.setupResultsTracking()
-
-    // Track user activity for time spent calculation
-    ;["mousemove", "keydown", "scroll"].forEach((eventType) => {
-      document.addEventListener(eventType, this.updateActivityTime.bind(this))
-    })
-
-    // Track page unload to calculate time spent
-    window.addEventListener("beforeunload", this.handleUnload.bind(this))
-
-    // Track navigation events
-    this.setupNavigationTracking()
-  }
-
-  private setupResourceTracking(): void {
-    // Track clicks on links to resources
-    document
-      .querySelectorAll(
-        'a[href$=".pdf"], a[href$=".doc"], a[href$=".docx"], a[href$=".ppt"], a[href$=".pptx"], a[href$=".zip"]',
-      )
-      .forEach((link) => {
-        link.addEventListener("click", (e) => {
-          const target = e.currentTarget as HTMLAnchorElement
-          this.trackEvent(EventType.RESOURCE_ACCESS, {
-            resourceId: target.href,
-            resourceType: target.href.split(".").pop(),
-            resourceTitle: target.textContent || target.title || target.href,
-            moduleId: this.moduleId,
-          })
-        })
-      })
-  }
-
-  private setupVideoTracking(): void {
-    // Track video interactions
-    document.querySelectorAll("video").forEach((video) => {
-      // Track video play
-      video.addEventListener("play", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "play",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-
-      // Track video pause
-      video.addEventListener("pause", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "pause",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-
-      // Track video ended
-      video.addEventListener("ended", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "ended",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-
-      // Track seeking
-      video.addEventListener("seeked", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "seeked",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-    })
-  }
-
-  private setupQuizTracking(): void {
-    // Track quiz submissions
-    document.querySelectorAll("form.quiz-form, form.assessment-form").forEach((form) => {
-      form.addEventListener("submit", () => {
-        // Extract quiz ID from form or URL
-        let quizId = (form as HTMLFormElement).dataset.quizId || ""
-        if (!quizId) {
-          const quizMatch = window.location.pathname.match(/\/quiz\/([^/]+)/)
-          if (quizMatch) quizId = quizMatch[1]
-        }
-
-        this.trackEvent(EventType.QUIZ_ATTEMPT, {
-          quizId,
-          quizTitle: document.querySelector("h1, .quiz-title")?.textContent || "",
-          moduleId: this.moduleId,
-        })
-      })
-    })
-  }
-
-  private setupPastExamPaperTracking(): void {
-    // Track past exam paper downloads
-    document.querySelectorAll('a[href*="past_exam"]').forEach((link) => {
-      link.addEventListener("click", (e) => {
-        const target = e.currentTarget as HTMLAnchorElement
-        this.trackEvent(EventType.PAST_EXAM_ACCESS, {
-          paperUrl: target.href,
-          paperTitle: target.textContent || target.title || "",
-          moduleId: this.extractModuleCodeFromUrl(target.href),
-        })
-      })
-    })
-  }
-
-  private setupPaymentTracking(): void {
-    // Track payment page interactions
-    if (window.location.href.includes("/payments") || window.location.href.includes("/#/payments")) {
-      // Track payment form submissions
-      document.querySelectorAll("form.payment-form, button.make-payment").forEach((element) => {
-        element.addEventListener("click", () => {
-          this.trackEvent(EventType.PAYMENT_INTERACTION, {
-            action: "payment_initiated",
-            url: window.location.href,
-          })
-        })
-      })
-    }
-  }
-
-  private setupResultsTracking(): void {
-    // Track results page views
-    if (window.location.href.includes("/results") || window.location.href.includes("/#/results")) {
-      this.trackEvent(EventType.RESULTS_VIEW, {
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-      })
-    }
-  }
-
-  private extractModuleCodeFromUrl(url: string): string {
-    // Extract module code from URL (e.g., CUCEM302 from a past exam paper URL)
-    const moduleCodeMatch = url.match(/\/([A-Z]+\d+)\//)
-    return moduleCodeMatch ? moduleCodeMatch[1] : "unknown"
-  }
-
-  private setupNavigationTracking(): void {
-    // Use MutationObserver to detect navigation changes in single-page applications
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          // Check if the URL has changed since last check
-          const currentPath = window.location.pathname + window.location.hash
-          if (this.lastPath !== currentPath) {
-            this.lastPath = currentPath
-            this.trackPageView()
-            this.extractModuleInfo()
-
-            // Check for specific pages
-            if (currentPath.includes("/modules") || currentPath.includes("/#/modules")) {
-              this.trackEvent(EventType.MODULE_LIST_VIEW, {
-                url: window.location.href,
-              })
-            } else if (currentPath.includes("/results") || currentPath.includes("/#/results")) {
-              this.trackEvent(EventType.RESULTS_VIEW, {
-                url: window.location.href,
-              })
-            } else if (currentPath.includes("/profile") || currentPath.includes("/#/profile")) {
-              this.trackEvent(EventType.PROFILE_VIEW, {
-                url: window.location.href,
-              })
-            } else if (currentPath.includes("/bursary") || currentPath.includes("/#/bursary")) {
-              this.trackEvent(EventType.BURSARY_VIEW, {
-                url: window.location.href,
-              })
-            }
-          }
-        }
-      }
-    })
-
-    observer.observe(document.body, { childList: true, subtree: true })
-  }
-
-  private lastPath: string = window.location.pathname + window.location.hash
-
-  private updateActivityTime(): void {
-    this.lastActivityTime = Date.now()
-  }
-
-  private handleClick(event: MouseEvent): void {
-    if (!this.isTracking) return
-
+// Set up event listeners
+function setupEventListeners() {
+  // Track clicks
+  document.addEventListener("click", (event) => {
     const target = event.target as HTMLElement
 
     // Track button clicks
@@ -409,107 +159,114 @@ class ContentTracker {
         target.tagName === "BUTTON" || target.tagName === "A" ? target : target.closest("button") || target.closest("a")
 
       if (element) {
-        this.trackEvent(EventType.BUTTON_CLICK, {
-          text: element.textContent?.trim() || "",
-          href: (element as HTMLAnchorElement).href || "",
-          id: element.id || "",
-          class: element.className || "",
-          moduleId: this.moduleId,
+        trackEvent("click", {
+          element_type: element.tagName.toLowerCase(),
+          element_text: element.textContent?.trim() || "",
+          element_id: element.id || "",
+          element_class: element.className || "",
         })
       }
     }
-  }
+  })
 
-  private handleFormSubmit(event: SubmitEvent): void {
-    if (!this.isTracking) return
-
+  // Track form submissions
+  document.addEventListener("submit", (event) => {
     const form = event.target as HTMLFormElement
-    this.trackEvent(EventType.FORM_SUBMIT, {
-      action: form.action || "",
-      id: form.id || "",
-      formElements: this.getFormElementNames(form),
-      moduleId: this.moduleId,
+    trackEvent("form_submit", {
+      form_id: form.id || "",
+      form_action: form.action || "",
     })
-  }
+  })
 
-  private getFormElementNames(form: HTMLFormElement): string[] {
-    const elements = Array.from(form.elements) as HTMLElement[]
-    return elements.filter((el) => (el as HTMLInputElement).name).map((el) => (el as HTMLInputElement).name)
-  }
+  // Track file downloads
+  document.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement
+    const link = target.tagName === "A" ? target : target.closest("a")
 
-  private handleUnload(): void {
-    if (!this.isTracking) return
+    if (link && (link as HTMLAnchorElement).href) {
+      const href = (link as HTMLAnchorElement).href
+      const fileExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip"]
 
-    const timeSpent = Date.now() - this.sessionStartTime
-    this.trackEvent(EventType.PAGE_EXIT, {
-      timeSpent: timeSpent,
-      url: window.location.href,
-      moduleId: this.moduleId,
-    })
-  }
-
-  private trackPageView(): void {
-    // Determine page type based on URL
-    let pageType = "unknown"
-    const url = window.location.href
-
-    if (url.includes("/login")) {
-      pageType = "login"
-    } else if (url.includes("/dashboard")) {
-      pageType = "dashboard"
-    } else if (url.includes("/modules")) {
-      pageType = "modules"
-    } else if (url.includes("/bursary")) {
-      pageType = "bursary"
-    } else if (url.includes("/resetpin")) {
-      pageType = "resetpin"
-    } else if (url.includes("/payments")) {
-      pageType = "payments"
-    } else if (url.includes("/results")) {
-      pageType = "results"
-    } else if (url.includes("/profile")) {
-      pageType = "profile"
-    } else if (url.includes("/contacts")) {
-      pageType = "contacts"
-    } else if (url.includes("/esadza")) {
-      pageType = "esadza"
-    } else if (url.includes("/re_sign_up")) {
-      pageType = "signup"
+      if (fileExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+        trackEvent("file_download", {
+          file_url: href,
+          file_name: href.split("/").pop() || "",
+        })
+      }
     }
+  })
 
-    this.trackEvent(EventType.PAGE_VIEW, {
-      title: document.title,
-      url: window.location.href,
-      referrer: document.referrer,
-      moduleId: this.moduleId,
-      pageType: pageType,
+  // Track page unload
+  window.addEventListener("beforeunload", () => {
+    // Calculate final session time
+    const endTime = new Date().toISOString()
+    analyticsData.current_session.total_time_spent = getTimeDifference(
+      analyticsData.current_session.start_time,
+      endTime,
+    )
+
+    // Track page exit
+    trackEvent("page_exit")
+
+    // Update session status
+    analyticsData.current_session.is_active = false
+    analyticsData.current_session.last_activity = endTime
+
+    saveAnalyticsData()
+
+    // Send session update to API
+    sendToAPI("/sessions/update", {
+      session_id: analyticsData.current_session.session_id,
+      end_time: endTime,
+      total_time_spent: analyticsData.current_session.total_time_spent,
+      pages_visited: analyticsData.current_session.pages_visited,
     })
-  }
+  })
 
-  private trackEvent(eventType: EventType, details: Record<string, any>): void {
-    if (!this.isTracking) return
-
-    const event: TrackingEvent = {
-      eventType,
-      url: window.location.href,
-      path: window.location.pathname + window.location.hash,
-      details,
-      timestamp: new Date().toISOString(),
-      userId: this.userId,
-      studentId: this.studentId,
-      sessionId: this.sessionId,
-      deviceInfo: this.deviceInfo,
-      browserInfo: this.browserInfo,
+  // Track visibility change
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      trackEvent("tab_hidden")
+    } else {
+      trackEvent("tab_visible")
     }
-
-    // Send event to background script to avoid CORS issues
-    chrome.runtime.sendMessage({ action: "trackEvent", event })
-
-    // Also log to console for debugging
-    console.log("Tracked event:", event)
-  }
+  })
 }
 
-// Initialize the tracker
-const tracker = new ContentTracker()
+// Retry failed requests
+function retryFailedRequests() {
+  const failedRequests = JSON.parse(localStorage.getItem("failedRequests") || "[]")
+  if (failedRequests.length === 0) return
+
+  const newFailedRequests: any[] = []
+
+  for (const request of failedRequests) {
+    fetch(`${API_ENDPOINT}${request.endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request.data),
+    }).catch((error) => {
+      console.error("Error retrying request:", error)
+      newFailedRequests.push(request)
+    })
+  }
+
+  localStorage.setItem("failedRequests", JSON.stringify(newFailedRequests))
+}
+
+// Initialize when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  initializeTracking()
+  setupEventListeners()
+  retryFailedRequests()
+
+  // Set up interval to retry failed requests
+  setInterval(retryFailedRequests, 5 * 60 * 1000) // Every 5 minutes
+})
+
+// Initialize immediately for SPA navigation
+initializeTracking()
+setupEventListeners()
 

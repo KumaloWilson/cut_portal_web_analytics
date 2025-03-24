@@ -1,15 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CUT eLearning Analytics</title>
+  <title>CUT eLearning Analytics</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      width: 320px;
+      font-family: Arial, sans-serif;
+      padding: 16px;
+      margin: 0;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .logo {
+      width: 32px;
+      height: 32px;
+      margin-right: 8px;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .active {
+      background-color: #4CAF50;
+    }
+    .inactive {
+      background-color: #F44336;
+    }
+    .stats {
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-weight: bold;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .primary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .secondary {
+      background-color: #e0e0e0;
+      color: #333;
+    }
+    .danger {
+      background-color: #F44336;
+      color: white;
+    }
+    .student-info {
+      margin-bottom: 16px;
+    }
+    .sync-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .sync-status {
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+    .sync-status.idle {
+      background-color: #e0e0e0;
+    }
+    .sync-status.syncing {
+      background-color: #FFC107;
+    }
+    .sync-status.success {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .sync-status.error {
+      background-color: #F44336;
+      color: white;
+    }
+  </style>
 </head>
-
 <body>
-    <div id="root"></div>
-    <script src="popup.js"></script>
+  <div class="header">
+    <img src="../icons/icon48.png" alt="Logo" class="logo">
+    <h1>CUT eLearning Analytics</h1>
+  </div>
+  
+  <div class="student-info">
+    <div id="student-name">Loading student info...</div>
+    <div id="student-id"></div>
+  </div>
+  
+  <div class="status">
+    <div id="status-indicator" class="status-indicator active"></div>
+    <span id="status-text">Tracking active</span>
+  </div>
+  
+  <div class="sync-info">
+    <span>Last sync: <span id="last-sync-time">Never</span></span>
+    <span id="sync-status" class="sync-status idle">Idle</span>
+  </div>
+  
+  <div class="stats">
+    <div class="stat-row">
+      <span class="stat-label">Session Duration:</span>
+      <span id="session-duration">0:00</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Pages Visited:</span>
+      <span id="pages-visited">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Events Tracked:</span>
+      <span id="events-tracked">0</span>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button id="toggle-tracking" class="primary">Pause Tracking</button>
+    <button id="sync-data" class="secondary">Sync Data Now</button>
+    <button id="clear-data" class="danger">Clear Local Data</button>
+  </div>
+  
+  <script src="popup.js"></script>
 </body>
-
 </html>
+

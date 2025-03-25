@@ -13,7 +13,7 @@ export function extractStudentProfile(): StudentProfile | null {
 
     const data = JSON.parse(currentStudent)
 
-    // Extract profile data
+    // Extract profile data from the structure shown in the example
     const profile = data.profile || {}
     const registration = data.registration || {}
     const program = registration.program || {}

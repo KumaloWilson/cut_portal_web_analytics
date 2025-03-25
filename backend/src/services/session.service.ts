@@ -97,6 +97,11 @@ export class SessionService {
     return SessionModel.findByStudentId(studentId)
   }
 
+  static async getSessions(): Promise<Session[]> {
+    const sessions = await SessionModel.findAll()
+    return Array.isArray(sessions) ? sessions : ([sessions].filter((s): s is Session => s !== null))
+  }
+
   static async getSessionById(sessionId: string): Promise<Session | null> {
     return SessionModel.findById(sessionId)
   }

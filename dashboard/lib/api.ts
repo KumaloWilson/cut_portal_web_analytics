@@ -127,7 +127,7 @@ export const getStudentEvents = (
 export const getSessions = () => fetchApi<Session[]>("/sessions")
 export const getSession = (id: string) => fetchApi<Session>(`/sessions/${id}`)
 export const getSessionEvents = (id: string) => fetchApi<EventType[]>(`/events/session/${id}`)
-export const getActiveSessions = () => fetchApi<Session[]>("/sessions/active")
+export const getActiveSessions = () => fetchApi<Session[]>("/sessions")
 
 // Event data
 export const getEvents = (limit = 100, offset = 0) => 

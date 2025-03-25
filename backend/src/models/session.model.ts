@@ -13,6 +13,16 @@ export interface Session {
 }
 
 export class SessionModel {
+  static async findAll(): Promise<Session | null> {
+    try {
+      const result = await pool.query("SELECT * FROM sessions")
+      return result?.rows && result.rows.length > 0 ? result.rows[0] : null
+    } catch (error) {
+      console.error(`Error`, error)
+      throw error
+    }
+  }
+
   static async findById(sessionId: string): Promise<Session | null> {
     try {
       const result = await pool.query("SELECT * FROM sessions WHERE session_id = $1", [sessionId])

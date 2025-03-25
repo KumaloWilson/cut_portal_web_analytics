@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { ResponsiveHeatMap } from "@nivo/heatmap"
 import { Skeleton } from "../../components/ui/skeleton"
 

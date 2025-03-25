@@ -1,515 +1,456 @@
-import { EventType, type TrackingEvent } from "../types/events"
+import type { TrackingEvent, AnalyticsData } from "./types"
+import {
+  generateSessionId,
+  extractStudentProfile,
+  extractModules,
+  getCurrentPageInfo,
+  getTimeDifference,
+} from "./utils"
 
-// Declare chrome if it's not available in the current environment (e.g., testing)
+// Initialize analytics data
+let analyticsData: AnalyticsData = {
+  current_session: {
+    session_id: "",
+    start_time: "",
+    last_activity: "",
+    is_active: false,
+    pages_visited: 0,
+    total_time_spent: 0,
+  },
+  events: [],
+}
+
+// API endpoint
+const API_ENDPOINT = "http://localhost:3000/api"
+
+// Declare chrome if it's not available globally
 declare const chrome: any
 
-class ContentTracker {
-  private readonly API_URL = "http://localhost:3000/api"
-  private isTracking = true
-  private sessionStartTime: number
-  private lastActivityTime: number
-  private userId: string | null = null
-  private studentId: string | null = null
-  private sessionId: string | null = null
-  private moduleId: string | null = null
-  private deviceInfo: any = {}
-  private browserInfo: any = {}
-  private studentData: any = null
+// Check if student is logged in by monitoring localStorage
+function checkLoginStatus() {
+  try {
+    const currentStudentData = localStorage.getItem("currentStudent")
+    if (currentStudentData) {
+      // Student is logged in, extract profile
+      const studentProfile = extractStudentProfile()
 
-  constructor() {
-    this.sessionStartTime = Date.now()
-    this.lastActivityTime = this.sessionStartTime
-    this.initializeTracking()
-  }
+      if (studentProfile && studentProfile.student_id) {
+        // Track login event
+        trackEvent("login_detected", {
+          student_id: studentProfile.student_id,
+          timestamp: new Date().toISOString(),
+        })
 
-  private async initializeTracking(): Promise<void> {
-    // Collect device and browser information
-    this.collectDeviceInfo()
+        // Update analytics data with student info
+        analyticsData.student = studentProfile
+        analyticsData.modules = extractModules()
+        saveAnalyticsData()
 
-    // Check if tracking is enabled
-    chrome.storage.local.get(["tracking", "userId", "sessionId"], (result: { tracking: boolean; userId: null; sessionId: string }) => {
-      this.isTracking = result.tracking !== false
-      this.userId = result.userId || null
-      this.sessionId = result.sessionId || this.generateSessionId()
+        // Send student data to API to create/update student record
+        sendToAPI("/students", studentProfile)
 
-      // Store session ID
-      chrome.storage.local.set({ sessionId: this.sessionId })
-
-      if (this.isTracking) {
-        this.setupEventListeners()
-        this.trackPageView()
-        this.extractUserInfo()
-        this.extractModuleInfo()
-        this.extractStudentDataFromLocalStorage()
-      }
-    })
-  }
-
-  private collectDeviceInfo(): void {
-    // Collect device information
-    this.deviceInfo = {
-      screenWidth: window.screen.width,
-      screenHeight: window.screen.height,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      pixelRatio: window.devicePixelRatio,
-      platform: navigator.platform,
-      language: navigator.language,
-    }
-
-    // Collect browser information
-    this.browserInfo = {
-      userAgent: navigator.userAgent,
-      vendor: navigator.vendor,
-      cookieEnabled: navigator.cookieEnabled,
-    }
-  }
-
-  private generateSessionId(): string {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0,
-        v = c == "x" ? r : (r & 0x3) | 0x8
-      return v.toString(16)
-    })
-  }
-
-  private extractStudentDataFromLocalStorage(): void {
-    try {
-      // Try to get student data from localStorage
-      const studentData = localStorage.getItem("currentStudent")
-
-      if (studentData) {
-        this.studentData = JSON.parse(studentData)
-
-        // Extract student ID and other relevant information
-        if (this.studentData?.profile?.student_id) {
-          this.studentId = this.studentData.profile.student_id
-
-          // Send student data to background script
-          chrome.runtime.sendMessage({
-            action: "updateStudentInfo",
-            studentId: this.studentId,
-            studentData: this.studentData,
-          })
-
-          // Track login event if student ID is found
-          this.trackEvent(EventType.LOGIN, {
-            method: "localStorage",
-            studentId: this.studentId,
-            programCode: this.studentData?.registration?.program?.programme_code || null,
-            facultyCode: this.studentData?.registration?.program?.faculty_code || null,
-            level: this.studentData?.registration?.program?.level || null,
+        // If modules are available, send them to API
+        if (analyticsData.modules && analyticsData.modules.length > 0) {
+          sendToAPI(`/students/${studentProfile.student_id}/modules`, {
+            modules: analyticsData.modules,
+            period_id: new Date().toISOString().split("T")[0], // Use current date as period ID
           })
         }
-      }
-    } catch (error) {
-      console.error("Error extracting student data from localStorage:", error)
-    }
-  }
 
-  private extractUserInfo(): void {
-    // Try to extract user information from the page
-    const usernameElement = document.querySelector(".username, .user-name") as HTMLElement
-    if (usernameElement && usernameElement.textContent) {
-      const username = usernameElement.textContent.trim()
-      chrome.storage.local.set({ userId: username })
-      this.userId = username
-
-      // Track login event if user ID is found
-      if (this.userId) {
-        this.trackEvent(EventType.LOGIN, {
-          method: "auto",
-        })
+        console.log("Student logged in:", studentProfile.first_name, studentProfile.surname)
+        return true
       }
     }
-
-    // Try to extract additional user information
-    const userEmailElement = document.querySelector(".user-email") as HTMLElement
-    const userRoleElement = document.querySelector(".user-role") as HTMLElement
-
-    const userInfo: any = {}
-
-    if (userEmailElement && userEmailElement.textContent) {
-      userInfo.email = userEmailElement.textContent.trim()
-    }
-
-    if (userRoleElement && userRoleElement.textContent) {
-      userInfo.role = userRoleElement.textContent.trim()
-    }
-
-    if (Object.keys(userInfo).length > 0 && this.userId) {
-      // Send user info to background script to store in database
-      chrome.runtime.sendMessage({
-        action: "updateUserInfo",
-        userId: this.userId,
-        userInfo,
-      })
-    }
-  }
-
-  private extractModuleInfo(): void {
-    // Try to extract module information from the URL or page content
-    const moduleIdMatch = window.location.pathname.match(/\/module\/([^/]+)/)
-    if (moduleIdMatch && moduleIdMatch[1]) {
-      this.moduleId = moduleIdMatch[1]
-
-      // Try to extract module title
-      const moduleTitleElement = document.querySelector(".module-title, h1") as HTMLElement
-      let moduleTitle = ""
-
-      if (moduleTitleElement && moduleTitleElement.textContent) {
-        moduleTitle = moduleTitleElement.textContent.trim()
-      }
-
-      // Send module info to background script
-      chrome.runtime.sendMessage({
-        action: "updateModuleInfo",
-        moduleId: this.moduleId,
-        moduleInfo: {
-          title: moduleTitle,
-          url: window.location.href,
-        },
-      })
-    }
-
-    // Check if we're on the modules page and extract modules list
-    if (window.location.href.includes("/modules") || window.location.href.includes("/#/modules")) {
-      // Try to extract modules from the page or localStorage
-      if (this.studentData?.registration?.modules) {
-        const modules = this.studentData.registration.modules
-
-        // Send modules info to background script
-        chrome.runtime.sendMessage({
-          action: "updateModulesList",
-          studentId: this.studentId,
-          modules: modules,
-        })
-      }
-    }
-  }
-
-  private setupEventListeners(): void {
-    // Track clicks
-    document.addEventListener("click", this.handleClick.bind(this))
-
-    // Track form submissions
-    document.addEventListener("submit", this.handleFormSubmit.bind(this))
-
-    // Track resource access
-    this.setupResourceTracking()
-
-    // Track video interactions
-    this.setupVideoTracking()
-
-    // Track quiz attempts
-    this.setupQuizTracking()
-
-    // Track past exam paper downloads
-    this.setupPastExamPaperTracking()
-
-    // Track payment interactions
-    this.setupPaymentTracking()
-
-    // Track results viewing
-    this.setupResultsTracking()
-
-    // Track user activity for time spent calculation
-    ;["mousemove", "keydown", "scroll"].forEach((eventType) => {
-      document.addEventListener(eventType, this.updateActivityTime.bind(this))
-    })
-
-    // Track page unload to calculate time spent
-    window.addEventListener("beforeunload", this.handleUnload.bind(this))
-
-    // Track navigation events
-    this.setupNavigationTracking()
-  }
-
-  private setupResourceTracking(): void {
-    // Track clicks on links to resources
-    document
-      .querySelectorAll(
-        'a[href$=".pdf"], a[href$=".doc"], a[href$=".docx"], a[href$=".ppt"], a[href$=".pptx"], a[href$=".zip"]',
-      )
-      .forEach((link) => {
-        link.addEventListener("click", (e) => {
-          const target = e.currentTarget as HTMLAnchorElement
-          this.trackEvent(EventType.RESOURCE_ACCESS, {
-            resourceId: target.href,
-            resourceType: target.href.split(".").pop(),
-            resourceTitle: target.textContent || target.title || target.href,
-            moduleId: this.moduleId,
-          })
-        })
-      })
-  }
-
-  private setupVideoTracking(): void {
-    // Track video interactions
-    document.querySelectorAll("video").forEach((video) => {
-      // Track video play
-      video.addEventListener("play", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "play",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-
-      // Track video pause
-      video.addEventListener("pause", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "pause",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-
-      // Track video ended
-      video.addEventListener("ended", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "ended",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-
-      // Track seeking
-      video.addEventListener("seeked", () => {
-        this.trackEvent(EventType.VIDEO_INTERACTION, {
-          action: "seeked",
-          videoSrc: video.currentSrc,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        })
-      })
-    })
-  }
-
-  private setupQuizTracking(): void {
-    // Track quiz submissions
-    document.querySelectorAll("form.quiz-form, form.assessment-form").forEach((form) => {
-      form.addEventListener("submit", () => {
-        // Extract quiz ID from form or URL
-        let quizId = (form as HTMLFormElement).dataset.quizId || ""
-        if (!quizId) {
-          const quizMatch = window.location.pathname.match(/\/quiz\/([^/]+)/)
-          if (quizMatch) quizId = quizMatch[1]
-        }
-
-        this.trackEvent(EventType.QUIZ_ATTEMPT, {
-          quizId,
-          quizTitle: document.querySelector("h1, .quiz-title")?.textContent || "",
-          moduleId: this.moduleId,
-        })
-      })
-    })
-  }
-
-  private setupPastExamPaperTracking(): void {
-    // Track past exam paper downloads
-    document.querySelectorAll('a[href*="past_exam"]').forEach((link) => {
-      link.addEventListener("click", (e) => {
-        const target = e.currentTarget as HTMLAnchorElement
-        this.trackEvent(EventType.PAST_EXAM_ACCESS, {
-          paperUrl: target.href,
-          paperTitle: target.textContent || target.title || "",
-          moduleId: this.extractModuleCodeFromUrl(target.href),
-        })
-      })
-    })
-  }
-
-  private setupPaymentTracking(): void {
-    // Track payment page interactions
-    if (window.location.href.includes("/payments") || window.location.href.includes("/#/payments")) {
-      // Track payment form submissions
-      document.querySelectorAll("form.payment-form, button.make-payment").forEach((element) => {
-        element.addEventListener("click", () => {
-          this.trackEvent(EventType.PAYMENT_INTERACTION, {
-            action: "payment_initiated",
-            url: window.location.href,
-          })
-        })
-      })
-    }
-  }
-
-  private setupResultsTracking(): void {
-    // Track results page views
-    if (window.location.href.includes("/results") || window.location.href.includes("/#/results")) {
-      this.trackEvent(EventType.RESULTS_VIEW, {
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-      })
-    }
-  }
-
-  private extractModuleCodeFromUrl(url: string): string {
-    // Extract module code from URL (e.g., CUCEM302 from a past exam paper URL)
-    const moduleCodeMatch = url.match(/\/([A-Z]+\d+)\//)
-    return moduleCodeMatch ? moduleCodeMatch[1] : "unknown"
-  }
-
-  private setupNavigationTracking(): void {
-    // Use MutationObserver to detect navigation changes in single-page applications
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          // Check if the URL has changed since last check
-          const currentPath = window.location.pathname + window.location.hash
-          if (this.lastPath !== currentPath) {
-            this.lastPath = currentPath
-            this.trackPageView()
-            this.extractModuleInfo()
-
-            // Check for specific pages
-            if (currentPath.includes("/modules") || currentPath.includes("/#/modules")) {
-              this.trackEvent(EventType.MODULE_LIST_VIEW, {
-                url: window.location.href,
-              })
-            } else if (currentPath.includes("/results") || currentPath.includes("/#/results")) {
-              this.trackEvent(EventType.RESULTS_VIEW, {
-                url: window.location.href,
-              })
-            } else if (currentPath.includes("/profile") || currentPath.includes("/#/profile")) {
-              this.trackEvent(EventType.PROFILE_VIEW, {
-                url: window.location.href,
-              })
-            } else if (currentPath.includes("/bursary") || currentPath.includes("/#/bursary")) {
-              this.trackEvent(EventType.BURSARY_VIEW, {
-                url: window.location.href,
-              })
-            }
-          }
-        }
-      }
-    })
-
-    observer.observe(document.body, { childList: true, subtree: true })
-  }
-
-  private lastPath: string = window.location.pathname + window.location.hash
-
-  private updateActivityTime(): void {
-    this.lastActivityTime = Date.now()
-  }
-
-  private handleClick(event: MouseEvent): void {
-    if (!this.isTracking) return
-
-    const target = event.target as HTMLElement
-
-    // Track button clicks
-    if (target.tagName === "BUTTON" || target.tagName === "A" || target.closest("button") || target.closest("a")) {
-      const element =
-        target.tagName === "BUTTON" || target.tagName === "A" ? target : target.closest("button") || target.closest("a")
-
-      if (element) {
-        this.trackEvent(EventType.BUTTON_CLICK, {
-          text: element.textContent?.trim() || "",
-          href: (element as HTMLAnchorElement).href || "",
-          id: element.id || "",
-          class: element.className || "",
-          moduleId: this.moduleId,
-        })
-      }
-    }
-  }
-
-  private handleFormSubmit(event: SubmitEvent): void {
-    if (!this.isTracking) return
-
-    const form = event.target as HTMLFormElement
-    this.trackEvent(EventType.FORM_SUBMIT, {
-      action: form.action || "",
-      id: form.id || "",
-      formElements: this.getFormElementNames(form),
-      moduleId: this.moduleId,
-    })
-  }
-
-  private getFormElementNames(form: HTMLFormElement): string[] {
-    const elements = Array.from(form.elements) as HTMLElement[]
-    return elements.filter((el) => (el as HTMLInputElement).name).map((el) => (el as HTMLInputElement).name)
-  }
-
-  private handleUnload(): void {
-    if (!this.isTracking) return
-
-    const timeSpent = Date.now() - this.sessionStartTime
-    this.trackEvent(EventType.PAGE_EXIT, {
-      timeSpent: timeSpent,
-      url: window.location.href,
-      moduleId: this.moduleId,
-    })
-  }
-
-  private trackPageView(): void {
-    // Determine page type based on URL
-    let pageType = "unknown"
-    const url = window.location.href
-
-    if (url.includes("/login")) {
-      pageType = "login"
-    } else if (url.includes("/dashboard")) {
-      pageType = "dashboard"
-    } else if (url.includes("/modules")) {
-      pageType = "modules"
-    } else if (url.includes("/bursary")) {
-      pageType = "bursary"
-    } else if (url.includes("/resetpin")) {
-      pageType = "resetpin"
-    } else if (url.includes("/payments")) {
-      pageType = "payments"
-    } else if (url.includes("/results")) {
-      pageType = "results"
-    } else if (url.includes("/profile")) {
-      pageType = "profile"
-    } else if (url.includes("/contacts")) {
-      pageType = "contacts"
-    } else if (url.includes("/esadza")) {
-      pageType = "esadza"
-    } else if (url.includes("/re_sign_up")) {
-      pageType = "signup"
-    }
-
-    this.trackEvent(EventType.PAGE_VIEW, {
-      title: document.title,
-      url: window.location.href,
-      referrer: document.referrer,
-      moduleId: this.moduleId,
-      pageType: pageType,
-    })
-  }
-
-  private trackEvent(eventType: EventType, details: Record<string, any>): void {
-    if (!this.isTracking) return
-
-    const event: TrackingEvent = {
-      eventType,
-      url: window.location.href,
-      path: window.location.pathname + window.location.hash,
-      details,
-      timestamp: new Date().toISOString(),
-      userId: this.userId,
-      studentId: this.studentId,
-      sessionId: this.sessionId,
-      deviceInfo: this.deviceInfo,
-      browserInfo: this.browserInfo,
-    }
-
-    // Send event to background script to avoid CORS issues
-    chrome.runtime.sendMessage({ action: "trackEvent", event })
-
-    // Also log to console for debugging
-    console.log("Tracked event:", event)
+    return false
+  } catch (error) {
+    console.error("Error checking login status:", error)
+    return false
   }
 }
 
-// Initialize the tracker
-const tracker = new ContentTracker()
+// Safely extract student profile with error handling
+function safeExtractStudentProfile() {
+  try {
+    return extractStudentProfile()
+  } catch (error) {
+    console.warn("Failed to extract student profile:", error)
+    return null
+  }
+}
+
+// Safely extract modules with error handling
+function safeExtractModules() {
+  try {
+    return extractModules()
+  } catch (error) {
+    console.warn("Failed to extract modules:", error)
+    return []
+  }
+}
+
+// Initialize tracking
+function initializeTracking() {
+  // Check if we already have a session
+  chrome.storage.local.get(["analyticsData"], (result: { analyticsData?: AnalyticsData }) => {
+    if (result.analyticsData) {
+      analyticsData = result.analyticsData
+
+      // Check if session is still valid (less than 30 minutes old)
+      const lastActivity = new Date(analyticsData.current_session.last_activity || new Date().toISOString())
+      const now = new Date()
+      const timeDiff = (now.getTime() - lastActivity.getTime()) / (1000 * 60) // in minutes
+
+      if (timeDiff > 30 || !analyticsData.current_session.is_active) {
+        // Create new session
+        createNewSession()
+      } else {
+        // Update last activity
+        analyticsData.current_session.last_activity = new Date().toISOString()
+        analyticsData.current_session.pages_visited = (analyticsData.current_session.pages_visited || 0) + 1
+        saveAnalyticsData()
+      }
+    } else {
+      // Create new session
+      createNewSession()
+    }
+
+    // Check login status
+    checkLoginStatus()
+
+    // Track page view
+    trackEvent("page_view")
+  })
+}
+
+// Create a new session
+function createNewSession() {
+  const sessionId = generateSessionId()
+  const now = new Date().toISOString()
+
+  // Try to extract student profile safely
+  const studentProfile = safeExtractStudentProfile()
+
+  analyticsData = {
+    student: studentProfile || undefined,
+    modules: safeExtractModules(),
+    current_session: {
+      session_id: sessionId,
+      student_id: studentProfile?.student_id,
+      start_time: now,
+      last_activity: now,
+      is_active: true,
+      pages_visited: 1,
+      total_time_spent: 0,
+    },
+    events: [],
+  }
+
+  saveAnalyticsData()
+
+  // Send session start to API
+  sendToAPI("/sessions", {
+    session_id: sessionId,
+    student_id: analyticsData.student?.student_id,
+    start_time: now,
+    user_agent: navigator.userAgent,
+  })
+}
+
+// Track an event
+function trackEvent(eventType: string, details: Record<string, any> = {}) {
+  try {
+    const pageInfo = getCurrentPageInfo()
+    const { path, title } = pageInfo || { path: window.location.pathname, title: document.title }
+    const timestamp = new Date().toISOString()
+
+    const event: TrackingEvent = {
+      event_type: eventType,
+      url: window.location.href,
+      path,
+      page_title: title,
+      timestamp,
+      session_id: analyticsData.current_session?.session_id || "",
+      student_id: analyticsData.student?.student_id,
+      details,
+    }
+
+    // Add to local events
+    analyticsData.events = analyticsData.events || []
+    analyticsData.events.push(event)
+
+    // Update session data
+    if (analyticsData.current_session) {
+      analyticsData.current_session.last_activity = timestamp
+      if (analyticsData.current_session.start_time) {
+        analyticsData.current_session.total_time_spent = getTimeDifference(
+          analyticsData.current_session.start_time,
+          timestamp,
+        )
+      }
+    }
+
+    saveAnalyticsData()
+
+    // Send to API immediately for real-time tracking
+    chrome.runtime.sendMessage({
+      type: "track_event",
+      event: event,
+    })
+  } catch (error) {
+    console.error("Error tracking event:", error)
+  }
+}
+
+// Save analytics data to chrome storage
+function saveAnalyticsData() {
+  try {
+    chrome.storage.local.set({ analyticsData })
+  } catch (error) {
+    console.error("Error saving analytics data:", error)
+  }
+}
+
+// Send data to API
+function sendToAPI(endpoint: string, data: any) {
+  fetch(`${API_ENDPOINT}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  }).catch((error) => {
+    console.error("Error sending data to API:", error)
+    // Store failed requests for later retry
+    try {
+      const failedRequests = JSON.parse(localStorage.getItem("failedRequests") || "[]")
+      failedRequests.push({ endpoint, data, timestamp: new Date().toISOString() })
+      localStorage.setItem("failedRequests", JSON.stringify(failedRequests))
+    } catch (storageError) {
+      console.error("Error storing failed request:", storageError)
+    }
+  })
+}
+
+// Set up event listeners
+function setupEventListeners() {
+  try {
+    // Track clicks
+    document.addEventListener("click", (event) => {
+      try {
+        const target = event.target as HTMLElement
+
+        // Track button clicks
+        if (target.tagName === "BUTTON" || target.tagName === "A" || target.closest("button") || target.closest("a")) {
+          const element =
+            target.tagName === "BUTTON" || target.tagName === "A"
+              ? target
+              : target.closest("button") || target.closest("a")
+
+          if (element) {
+            trackEvent("click", {
+              element_type: element.tagName.toLowerCase(),
+              element_text: element.textContent?.trim() || "",
+              element_id: element.id || "",
+              element_class: element.className || "",
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error handling click event:", error)
+      }
+    })
+
+    // Track form submissions
+    document.addEventListener("submit", (event) => {
+      try {
+        const form = event.target as HTMLFormElement
+
+        // Check if this is a login form
+        const isLoginForm =
+          form.action &&
+          (form.action.includes("login") || form.action.includes("signin") || form.action.includes("auth"))
+
+        if (isLoginForm) {
+          // Set a timeout to check for login after form submission
+          setTimeout(() => {
+            const loggedIn = checkLoginStatus()
+            if (loggedIn) {
+              console.log("Login detected after form submission")
+            }
+          }, 2000) // Check after 2 seconds to allow for page load
+        }
+
+        trackEvent("form_submit", {
+          form_id: form.id || "",
+          form_action: form.action || "",
+          is_login_form: isLoginForm,
+        })
+      } catch (error) {
+        console.error("Error handling form submit event:", error)
+      }
+    })
+
+    // Track file downloads
+    document.addEventListener("click", (event) => {
+      try {
+        const target = event.target as HTMLElement
+        const link = target.tagName === "A" ? target : target.closest("a")
+
+        if (link && (link as HTMLAnchorElement).href) {
+          const href = (link as HTMLAnchorElement).href
+          const fileExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip"]
+
+          if (fileExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+            trackEvent("file_download", {
+              file_url: href,
+              file_name: href.split("/").pop() || "",
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error handling download click event:", error)
+      }
+    })
+
+    // Track page unload
+    window.addEventListener("beforeunload", () => {
+      try {
+        // Calculate final session time
+        const endTime = new Date().toISOString()
+        if (analyticsData.current_session && analyticsData.current_session.start_time) {
+          analyticsData.current_session.total_time_spent = getTimeDifference(
+            analyticsData.current_session.start_time,
+            endTime,
+          )
+        }
+
+        // Track page exit
+        trackEvent("page_exit")
+
+        // Update session status
+        if (analyticsData.current_session) {
+          analyticsData.current_session.is_active = false
+          analyticsData.current_session.last_activity = endTime
+        }
+
+        saveAnalyticsData()
+
+        // Send session update to API
+        sendToAPI("/sessions/update", {
+          session_id: analyticsData.current_session?.session_id,
+          end_time: endTime,
+          total_time_spent: analyticsData.current_session?.total_time_spent,
+          pages_visited: analyticsData.current_session?.pages_visited,
+        })
+      } catch (error) {
+        console.error("Error handling beforeunload event:", error)
+      }
+    })
+
+    // Track visibility change
+    document.addEventListener("visibilitychange", () => {
+      try {
+        if (document.visibilityState === "hidden") {
+          trackEvent("tab_hidden")
+        } else {
+          trackEvent("tab_visible")
+
+          // Check login status when tab becomes visible again
+          checkLoginStatus()
+        }
+      } catch (error) {
+        console.error("Error handling visibility change event:", error)
+      }
+    })
+
+    // Monitor localStorage changes to detect login/logout
+    const originalSetItem = localStorage.setItem
+    localStorage.setItem = function (key, value) {
+      originalSetItem.apply(this, [key, value])
+
+      // If currentStudent is being set, check login status
+      if (key === "currentStudent") {
+        setTimeout(() => {
+          checkLoginStatus()
+        }, 100)
+      }
+    }
+  } catch (error) {
+    console.error("Error setting up event listeners:", error)
+  }
+}
+
+// Retry failed requests
+function retryFailedRequests() {
+  try {
+    const failedRequestsJson = localStorage.getItem("failedRequests") || "[]"
+    const failedRequests = JSON.parse(failedRequestsJson)
+    if (failedRequests.length === 0) return
+
+    const newFailedRequests: any[] = []
+
+    for (const request of failedRequests) {
+      fetch(`${API_ENDPOINT}${request.endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request.data),
+      }).catch((error) => {
+        console.error("Error retrying request:", error)
+        newFailedRequests.push(request)
+      })
+    }
+
+    localStorage.setItem("failedRequests", JSON.stringify(newFailedRequests))
+  } catch (error) {
+    console.error("Error retrying failed requests:", error)
+  }
+}
+
+// Check if we're on login or signup page
+function isAuthPage() {
+  const path = window.location.pathname.toLowerCase()
+  return path.includes("login") || path.includes("signin") || path.includes("re_sign_up") || path.includes("signup")
+}
+
+// Initialize when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    // Check login status first
+    const isLoggedIn = checkLoginStatus()
+    console.log("Login status check on page load:", isLoggedIn ? "Logged in" : "Not logged in")
+
+    // Only initialize full tracking if not on auth pages
+    if (!isAuthPage()) {
+      initializeTracking()
+      setupEventListeners()
+      retryFailedRequests()
+
+      // Set up interval to retry failed requests
+      setInterval(retryFailedRequests, 5 * 60 * 1000) // Every 5 minutes
+    } else {
+      // For auth pages, only track minimal info without requiring student data
+      trackEvent("auth_page_view", { page_type: window.location.pathname.includes("login") ? "login" : "signup" })
+
+      // Set up event listeners specifically for login forms
+      setupEventListeners()
+    }
+  } catch (error) {
+    console.error("Error during initialization:", error)
+  }
+})
+
+// Initialize immediately for SPA navigation, with error handling
+try {
+  if (!isAuthPage()) {
+    initializeTracking()
+    setupEventListeners()
+  } else {
+    // For auth pages, set up login form tracking
+    setupEventListeners()
+  }
+} catch (error) {
+  console.error("Error during SPA initialization:", error)
+}
 

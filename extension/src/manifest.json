@@ -1,36 +1,28 @@
 {
-    "manifest_version": 3,
-    "name": "CUT eLearning Analytics",
-    "version": "1.0.0",
-    "description": "Tracks student interactions on CUT's eLearning portal",
-    "permissions": [
-        "storage",
-        "activeTab",
-        "scripting",
-        "webNavigation"
-    ],
-    "host_permissions": [
-        "https://elearning.cut.ac.zw/*"
-    ],
-    "background": {
-        "service_worker": "background.js"
-    },
-    "content_scripts": [
-        {
-            "matches": [
-                "https://elearning.cut.ac.zw/*"
-            ],
-            "js": [
-                "content.js"
-            ]
-        }
-    ],
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "16": "icons/icon16.png",
-            "48": "icons/icon48.png",
-            "128": "icons/icon128.png"
-        }
+  "manifest_version": 3,
+  "name": "CUT eLearning Analytics",
+  "version": "1.0.0",
+  "description": "Tracks student interactions on CUT's eLearning portal for analytics purposes",
+  "permissions": ["storage", "activeTab", "scripting", "webNavigation", "alarms", "webRequest"],
+  "host_permissions": ["https://elearning.cut.ac.zw/*", "http://localhost:3000/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://elearning.cut.ac.zw/*"],
+      "js": ["content.js"]
     }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
 }
+

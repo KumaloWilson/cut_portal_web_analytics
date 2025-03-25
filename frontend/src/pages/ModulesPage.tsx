@@ -15,10 +15,10 @@ import  LoadingSpinner  from "../components/common/LoadingSpinner"
 import  ErrorDisplay  from "../components/common/ErrorDisplay"
 import  DateRangePicker  from "../components/common/DateRangePicker"
 import { exportToCSV, exportToExcel, exportToPDF } from "../utils/exportUtils"
-import  {BarChart}  from "../components/ui/chart"
 import { Download, Search } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import Pagination from '../components/common/Pagination';
+import { Bar, BarChart, Tooltip, XAxis, YAxis } from "recharts"
 
 const ModulesPage: React.FC = () => {
   const navigate = useNavigate()
@@ -325,13 +325,21 @@ const ModulesPage: React.FC = () => {
             </CardHeader>
             <CardContent className="h-80">
               <BarChart
+                width={500}
+                height={300}
                 data={facultyData}
-                index="name"
-                categories={["value"]}
-                colors={["blue"]}
-                valueFormatter={(value: any) => `${value} modules`}
-                yAxisWidth={60}
-              />
+                margin={{
+                  top: 5,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+              >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} modules`} />
+                <Bar dataKey="value" fill="#3b82f6" />
+              </BarChart>
             </CardContent>
           </Card>
 
@@ -341,13 +349,21 @@ const ModulesPage: React.FC = () => {
             </CardHeader>
             <CardContent className="h-80">
               <BarChart
+                width={500}
+                height={300}
                 data={programData}
-                index="name"
-                categories={["value"]}
-                colors={["green"]}
-                valueFormatter={(value: any) => `${value} modules`}
-                yAxisWidth={60}
-              />
+                margin={{
+                  top: 5,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+              >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value} modules`} />
+                <Bar dataKey="value" fill="#22c55e" />
+              </BarChart>
             </CardContent>
           </Card>
         </div>
@@ -358,13 +374,21 @@ const ModulesPage: React.FC = () => {
           </CardHeader>
           <CardContent className="h-80">
             <BarChart
+              width={500}
+              height={300}
               data={activityData}
-              index="name"
-              categories={["value"]}
-              colors={["purple"]}
-              valueFormatter={(value: any) => `${value} modules`}
-              yAxisWidth={60}
-            />
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip formatter={(value) => `${value} modules`} />
+              <Bar dataKey="value" fill="#9333ea" />
+            </BarChart>
           </CardContent>
         </Card>
       </div>

@@ -22,7 +22,7 @@ WebSocketService.initialize(server)
 // Middleware
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*", // Allow specific origins or all (*)
+    origin: "*", // Allow specific origins or all (*)
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Specify allowed HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
     credentials: true, // Allow cookies if needed

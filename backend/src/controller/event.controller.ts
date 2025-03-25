@@ -24,6 +24,18 @@ export class EventController {
     }
   }
 
+
+  static async getEvents(req: Request, res: Response): Promise<void> {
+    try {
+      const events = await EventService.getEvents()
+      res.status(200).json(events)
+    } catch (error) {
+      console.error("Error fetching events:", error)
+      res.status(500).json({ error: "Failed to fetch events" })
+    }
+  }
+
+
   static async getEventsByStudentId(req: Request, res: Response): Promise<void> {
     try {
       const { studentId } = req.params

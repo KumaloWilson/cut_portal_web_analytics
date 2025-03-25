@@ -53,6 +53,19 @@ export class EventModel {
     }
   }
 
+  static async findEvents(): Promise<Event[]> {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM events`
+      )
+
+      return result.rows
+    } catch (error) {
+      console.error(`Error :`, error)
+      throw error
+    }
+  }
+
   static async findByStudentId(studentId: string, limit = 100, offset = 0): Promise<Event[]> {
     try {
       const result = await pool.query(

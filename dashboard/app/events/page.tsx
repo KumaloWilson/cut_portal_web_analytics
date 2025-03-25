@@ -28,7 +28,7 @@ import {
   LogOut,
   AlertTriangle,
 } from "lucide-react"
-import type { Event } from "@/types"
+import type { EventType } from "@/types"
 
 export default function EventsPage() {
   const { socket } = useSocket()
@@ -36,14 +36,14 @@ export default function EventsPage() {
   const [eventType, setEventType] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("time")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
-  const [recentEvents, setRecentEvents] = useState<Event[]>([])
+  const [recentEvents, setRecentEvents] = useState<EventType[]>([])
 
   // Fetch events data
   const { data: events, isLoading: isLoadingEvents } = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
       const response = await getEvents(100, 0)
-      return response.data
+      return response
     },
   })
 
@@ -52,7 +52,7 @@ export default function EventsPage() {
     queryKey: ["recentEvents"],
     queryFn: async () => {
       const response = await getRecentEvents(30, 50)
-      return response.data
+      return response
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   })
@@ -83,7 +83,7 @@ export default function EventsPage() {
   }, [socket])
 
   // Filter and sort events
-  const filteredEvents = events?.filter((event: Event) => {
+  const filteredEvents = events?.filter((event: EventType) => {
     const query = searchQuery.toLowerCase()
     const matchesSearch =
       event.event_type.toLowerCase().includes(query) ||
@@ -99,7 +99,7 @@ export default function EventsPage() {
     return matchesSearch
   })
 
-  const sortedEvents = filteredEvents?.sort((a: Event, b: Event) => {
+  const sortedEvents = filteredEvents?.sort((a: EventType, b: EventType) => {
     if (sortBy === "time") {
       const timeA = new Date(a.timestamp).getTime()
       const timeB = new Date(b.timestamp).getTime()
@@ -334,7 +334,7 @@ export default function EventsPage() {
                         </div>
                       </div>
                     ))
-                  : sortedEvents?.map((event: Event, index: number) => (
+                  : sortedEvents?.map((event: EventType, index: number) => (
                       <motion.div
                         key={event.id}
                         initial={{ opacity: 0 }}

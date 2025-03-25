@@ -24,7 +24,7 @@ export default function StudentsPage() {
     queryKey: ["students"],
     queryFn: async () => {
       const response = await getStudents()
-      return response.data
+      return response
     },
   })
 
@@ -33,7 +33,7 @@ export default function StudentsPage() {
     queryKey: ["studentEngagement"],
     queryFn: async () => {
       const response = await getStudentEngagement()
-      return response.data
+      return response
     },
   })
 

@@ -77,6 +77,11 @@ export class EventService {
     return EventModel.findBySessionId(sessionId)
   }
 
+
+  static async getEvents(): Promise<Event[]> {
+    return EventModel.findEvents()
+  }
+
   static async getEventsByStudentId(studentId: string, limit = 100, offset = 0): Promise<Event[]> {
     return EventModel.findByStudentId(studentId, limit, offset)
   }

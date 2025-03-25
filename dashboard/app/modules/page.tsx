@@ -25,7 +25,7 @@ export default function ModulesPage() {
     queryKey: ["moduleEngagement"],
     queryFn: async () => {
       const response = await getModuleEngagement()
-      return response.data
+      return response
     },
   })
 

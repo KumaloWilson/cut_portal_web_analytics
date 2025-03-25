@@ -18,7 +18,7 @@ import { AreaChart, BarChart, LineChart, PieChart } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination } from "@/components/ui/pagination"
 import { Clock, Calendar, Users, BookOpen, Eye, MousePointerClick, FileText, Activity } from "lucide-react"
-import { ActivityData, Module, ModuleEngagement, StudentEngagement, TimeOfDayActivity } from "@/types"
+import { ActivityData, Module, ModuleEngagement, PageAnalytics, StudentEngagement, TimeOfDayActivity } from "@/types"
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<number>(30)
@@ -28,7 +28,9 @@ export default function AnalyticsPage() {
     queryKey: ["activity", timeRange],
     queryFn: async () => {
       const response = await getActivityOverTime(timeRange)
-      return response.data
+
+      console.log("ACTIVITY RESPONSE",response);
+      return response
     },
   })
 
@@ -37,7 +39,8 @@ export default function AnalyticsPage() {
     queryKey: ["topPages"],
     queryFn: async () => {
       const response = await getTopPages(10)
-      return response.data
+      console.log("TOP PAGES RESPONSE",response);
+      return response
     },
   })
 
@@ -46,7 +49,8 @@ export default function AnalyticsPage() {
     queryKey: ["studentEngagement"],
     queryFn: async () => {
       const response = await getStudentEngagement()
-      return response.data
+      console.log("STUDENT ENGAGEMENT RESPONSE",response);
+      return response
     },
   })
 
@@ -55,7 +59,8 @@ export default function AnalyticsPage() {
     queryKey: ["moduleEngagement"],
     queryFn: async () => {
       const response = await getModuleEngagement()
-      return response.data
+      console.log("MODULE ENGAGEMENT RESPONSE",response);
+      return response
     },
   })
 
@@ -64,7 +69,8 @@ export default function AnalyticsPage() {
     queryKey: ["timeOfDayActivity"],
     queryFn: async () => {
       const response = await getTimeOfDayActivity()
-      return response.data
+      console.log("TIME OF DAY ACTIVITY RESPONSE",response);
+      return response
     },
   })
 
@@ -557,7 +563,7 @@ export default function AnalyticsPage() {
                           </div>
                         </div>
                       ))
-                    : topPages?.map((page: { page_title: string; page_path: string; view_count: number }, index: number) => (
+                    : topPages?.map((page: PageAnalytics, index: number) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0 }}

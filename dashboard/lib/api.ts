@@ -1,7 +1,8 @@
+import { ActivityData, DashboardOverview, EventType, Module, ModuleEngagement, PageAnalytics, Session, Student, StudentEngagement, TimeOfDayActivity } from '@/types';
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 // Base URL configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = "http://localhost:3000/api";
 
 // Custom error class for API errors
 class ApiError extends Error {
@@ -95,6 +96,7 @@ async function fetchApi<T>(
     }
     
     return response.data;
+    
   } catch (error) {
     if (error instanceof ApiError) {
       console.error(`API Error (${endpoint}):`, error.message, error.details);
@@ -106,17 +108,6 @@ async function fetchApi<T>(
   }
 }
 
-// Define types (placeholders - replace with actual types)
-export type DashboardOverview = {}
-export type Student = {}
-export type Module = {}
-export type Session = {}
-export type Event = {}
-export type ActivityData = {}
-export type PageAnalytics = {}
-export type StudentEngagement = {}
-export type ModuleEngagement = {}
-export type TimeOfDayActivity = {}
 
 // Dashboard overview
 export const getOverview = () => fetchApi<DashboardOverview>("/analytics/overview")
@@ -130,19 +121,19 @@ export const getStudentEvents = (
   id: string, 
   limit = 100, 
   offset = 0
-) => fetchApi<Event[]>(`/events/student/${id}?limit=${limit}&offset=${offset}`)
+) => fetchApi<EventType[]>(`/events/student/${id}?limit=${limit}&offset=${offset}`)
 
 // Session data
 export const getSessions = () => fetchApi<Session[]>("/sessions")
 export const getSession = (id: string) => fetchApi<Session>(`/sessions/${id}`)
-export const getSessionEvents = (id: string) => fetchApi<Event[]>(`/events/session/${id}`)
+export const getSessionEvents = (id: string) => fetchApi<EventType[]>(`/events/session/${id}`)
 export const getActiveSessions = () => fetchApi<Session[]>("/sessions/active")
 
 // Event data
 export const getEvents = (limit = 100, offset = 0) => 
-  fetchApi<Event[]>(`/events?limit=${limit}&offset=${offset}`)
+  fetchApi<EventType[]>(`/events?limit=${limit}&offset=${offset}`)
 export const getRecentEvents = (minutes = 30, limit = 100) => 
-  fetchApi<Event[]>(`/events/recent?minutes=${minutes}&limit=${limit}`)
+  fetchApi<EventType[]>(`/events/recent?minutes=${minutes}&limit=${limit}`)
 
 // Analytics data
 export const getActivityOverTime = (days = 30) => 

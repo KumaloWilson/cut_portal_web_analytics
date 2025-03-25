@@ -36,7 +36,7 @@ export interface Student {
   }
   
   // Event types
-  export interface Event {
+  export interface EventType {
     id: number
     event_type: string
     session_id: string

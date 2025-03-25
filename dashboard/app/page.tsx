@@ -23,7 +23,10 @@ export default function DashboardPage() {
     queryKey: ["overview"],
     queryFn: async () => {
       const response = await getOverview()
-      return response.data
+
+      console.log( "OVERVIEW RESPONSE" ,response);
+
+      return response
     },
   })
 
@@ -32,7 +35,7 @@ export default function DashboardPage() {
     queryKey: ["activity"],
     queryFn: async () => {
       const response = await getActivityOverTime(30)
-      return response.data
+      return response
     },
   })
 
@@ -41,7 +44,7 @@ export default function DashboardPage() {
     queryKey: ["topPages"],
     queryFn: async () => {
       const response = await getTopPages(10)
-      return response.data
+      return response
     },
   })
 

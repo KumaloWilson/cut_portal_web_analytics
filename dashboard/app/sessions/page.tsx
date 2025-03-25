@@ -28,7 +28,7 @@ export default function SessionsPage() {
     queryKey: ["sessions"],
     queryFn: async () => {
       const response = await getSessions()
-      return response.data
+      return response
     },
   })
 
@@ -37,7 +37,7 @@ export default function SessionsPage() {
     queryKey: ["activeSessions"],
     queryFn: async () => {
       const response = await getActiveSessions()
-      return response.data
+      return response
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   })

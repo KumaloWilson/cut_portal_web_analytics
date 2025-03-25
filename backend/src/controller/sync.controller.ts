@@ -2,8 +2,7 @@ import type { Request, Response } from "express"
 import { StudentService } from "../services/student.service"
 import { SessionService } from "../services/session.service"
 import { EventService } from "../services/event.service"
-import { AnalyticsData } from "../types/analytics.types"
-
+import type { AnalyticsData } from "../types/analytics.types"
 
 export class SyncController {
   static async syncData(req: Request, res: Response): Promise<void> {

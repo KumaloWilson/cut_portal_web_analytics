@@ -32,6 +32,13 @@ export class StudentController {
   static async createOrUpdateStudent(req: Request, res: Response): Promise<void> {
     try {
       const student = req.body
+
+      // Validate required fields
+      if (!student.student_id) {
+        res.status(400).json({ error: "Student ID is required" })
+        return
+      }
+
       const result = await StudentService.createOrUpdateStudent(student)
       res.status(201).json(result)
     } catch (error) {

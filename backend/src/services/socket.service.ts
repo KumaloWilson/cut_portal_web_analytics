@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from "socket.io"
 import type { Server as HttpServer } from "http"
 import type { Event } from "../models/event.model"
 import type { Session } from "../models/session.model"
+import type { Student } from "../models/student.model"
 
 let io: SocketIOServer | null = null
 
@@ -9,7 +10,7 @@ export class WebSocketService {
   static initialize(server: HttpServer): void {
     io = new SocketIOServer(server, {
       cors: {
-        origin:  "*",
+        origin: "*",
         methods: ["GET", "POST"],
       },
     })
@@ -73,6 +74,16 @@ export class WebSocketService {
 
     // Broadcast to specific session room
     io.to(`session:${session.session_id}`).emit("session-update", session)
+  }
+
+  static broadcastStudentUpdate(student: Student): void {
+    if (!io) return
+
+    // Broadcast to general students room
+    io.to("students").emit("student-update", student)
+
+    // Broadcast to specific student room
+    io.to(`student:${student.student_id}`).emit("student-update", student)
   }
 
   static broadcastAnalyticsUpdate(type: string, data: any): void {

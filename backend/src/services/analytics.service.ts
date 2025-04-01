@@ -10,6 +10,7 @@ export class AnalyticsService {
     const eventCount = await EventModel.getEventCount()
     const avgSessionTime = await SessionModel.getAverageSessionTime()
     const topPages = await AnalyticsModel.getTopPages(10)
+    const activeSessions = await SessionModel.getActiveSessions()
 
     return {
       total_students: studentCount,
@@ -17,6 +18,8 @@ export class AnalyticsService {
       total_events: eventCount,
       avg_session_time: avgSessionTime,
       top_pages: topPages,
+      active_sessions: activeSessions.length,
+      recent_events: await EventModel.getRecentEventsCount(30), // Last 30 minutes
     }
   }
 
@@ -38,6 +41,28 @@ export class AnalyticsService {
 
   static async getTimeOfDayActivity(): Promise<any[]> {
     return EventModel.getEventsByTimeOfDay()
+  }
+
+  static async getDailyVisitors(): Promise<any> {
+    const today = new Date().toISOString().split("T")[0]
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0]
+
+    const todayVisits = await AnalyticsModel.getDailyVisitorCount(today)
+    const yesterdayVisits = await AnalyticsModel.getDailyVisitorCount(yesterday)
+
+    const weeklyData = await AnalyticsModel.getActivityOverTime(7)
+    const weeklyTotal = weeklyData.reduce((sum, day) => sum + day.sessions, 0)
+    const weeklyAverage = Math.round(weeklyTotal / weeklyData.length)
+
+    const trend = yesterdayVisits > 0 ? ((todayVisits - yesterdayVisits) / yesterdayVisits) * 100 : 0
+
+    return {
+      today: todayVisits,
+      yesterday: yesterdayVisits,
+      trend,
+      weekly_total: weeklyTotal,
+      weekly_average: weeklyAverage,
+    }
   }
 }
 

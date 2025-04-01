@@ -63,5 +63,15 @@ export class AnalyticsController {
       res.status(500).json({ error: "Failed to fetch time of day metrics" })
     }
   }
+
+  static async getDailyVisitors(req: Request, res: Response): Promise<void> {
+    try {
+      const visitors = await AnalyticsService.getDailyVisitors()
+      res.status(200).json(visitors)
+    } catch (error) {
+      console.error("Error fetching daily visitors:", error)
+      res.status(500).json({ error: "Failed to fetch daily visitors" })
+    }
+  }
 }
 

@@ -21,5 +21,8 @@ router.get("/modules", AnalyticsController.getModuleEngagement)
 // Get student activity by time of day
 router.get("/time-of-day", AnalyticsController.getTimeOfDayActivity)
 
+// Get daily visitors
+router.get("/daily-visitors", AnalyticsController.getDailyVisitors)
+
 export default router
 

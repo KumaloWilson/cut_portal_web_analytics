@@ -1,7 +1,5 @@
 import { pool } from "./database"
 
-
-
 export class AnalyticsModel {
   static async updatePageView(path: string, title: string | null): Promise<void> {
     const pageCheck = await pool.query("SELECT id FROM page_views WHERE page_path = $1", [path])
@@ -95,13 +93,14 @@ export class AnalyticsModel {
       `SELECT s.student_id, 
               s.first_name, 
               s.surname, 
+              s.faculty_name,
               COUNT(DISTINCT se.session_id) as session_count,
               SUM(se.total_time_spent) as total_time_spent,
               COUNT(e.id) as event_count
        FROM students s
        LEFT JOIN sessions se ON s.student_id = se.student_id
        LEFT JOIN events e ON s.student_id = e.student_id
-       GROUP BY s.student_id, s.first_name, s.surname
+       GROUP BY s.student_id, s.first_name, s.surname, s.faculty_name
        ORDER BY total_time_spent DESC NULLS LAST`,
     )
 
@@ -123,6 +122,17 @@ export class AnalyticsModel {
     )
 
     return result.rows
+  }
+
+  static async getDailyVisitorCount(date: string): Promise<number> {
+    const result = await pool.query(
+      `SELECT SUM(session_count) as visitor_count
+       FROM student_activity
+       WHERE date = $1`,
+      [date],
+    )
+
+    return result.rows[0]?.visitor_count || 0
   }
 }
 

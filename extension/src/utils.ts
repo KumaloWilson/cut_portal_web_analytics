@@ -17,11 +17,12 @@ export function extractStudentProfile(): StudentProfile | null {
     const profile = data.profile || {}
     const registration = data.registration || {}
     const program = registration.program || {}
+    const reg_number = data.bursary.pastel_account || ""
 
     return {
       first_name: profile.first_name || "",
       surname: profile.surname || "",
-      student_id: profile.student_id || "",
+      student_id: reg_number || "",
       email_address: profile.email_address || "",
       programme_name: program.programme_name || "",
       programme_code: program.programme_code || "",

@@ -14,7 +14,7 @@ import type {
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type AxiosError } from "axios"
 
 // Base URL configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://cutanalyticsapi.onrender.com/api" // "http://localhost:3000/api"
 
 // Custom error class for API errors
 class ApiError extends Error {

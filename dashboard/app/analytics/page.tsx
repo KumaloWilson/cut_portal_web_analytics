@@ -16,9 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AreaChart, BarChart, LineChart, PieChart } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Pagination } from "@/components/ui/pagination"
 import { Clock, Calendar, Users, BookOpen, Eye, MousePointerClick, FileText, Activity } from "lucide-react"
-import { ActivityData, Module, ModuleEngagement, PageAnalytics, StudentEngagement, TimeOfDayActivity } from "@/types"
+import { ActivityData, ModuleEngagement, PageAnalytics, StudentEngagement, TimeOfDayActivity } from "@/types"
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<number>(30)
@@ -190,7 +189,7 @@ export default function AnalyticsPage() {
                 ) : (
                   <BarChart
                     data={
-                      topPages?.map((page: { page_title: any; page_path: string; view_count: any }) => ({
+                      topPages?.map((page: { page_title: unknown; page_path: string; view_count: unknown }) => ({
                         page: page.page_title || page.page_path.split("/").pop() || page.page_path,
                         views: page.view_count,
                       })) || []
@@ -497,7 +496,7 @@ export default function AnalyticsPage() {
                 ) : (
                   <BarChart
                     data={
-                      topPages?.map((page: { page_title: any; page_path: string; view_count: any }) => ({
+                      topPages?.map((page: { page_title: unknown; page_path: string; view_count: unknown }) => ({
                         page: page.page_title || page.page_path.split("/").pop() || page.page_path,
                         views: page.view_count,
                       })) || []

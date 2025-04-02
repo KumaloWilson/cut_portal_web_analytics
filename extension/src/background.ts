@@ -13,7 +13,7 @@ chrome.webNavigation.onCompleted.addListener(
 )
 
 // API endpoint
-const API_ENDPOINT = "http://localhost:3000/api"
+const API_ENDPOINT = "https://cutanalyticsapi.onrender.com/api"//"http://localhost:3000/api"
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

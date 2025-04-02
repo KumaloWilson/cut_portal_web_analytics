@@ -207,7 +207,7 @@ export default function DashboardPage() {
     interactions: 0,
   }
 
-  const sessionsChange = calculateChange(today.sessions, yesterday.sessions)
+  // const sessionsChange = calculateChange(today.sessions, yesterday.sessions)
   const pageViewsChange = calculateChange(today.pageViews, yesterday.pageViews)
   const interactionsChange = calculateChange(today.interactions, yesterday.interactions)
 

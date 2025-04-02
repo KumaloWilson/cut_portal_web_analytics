@@ -14,14 +14,14 @@ import type {
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type AxiosError } from "axios"
 
 // Base URL configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://cutanalyticsapi.onrender.com/api" // "http://localhost:3000/api"
 
 // Custom error class for API errors
 class ApiError extends Error {
   status?: number
-  details?: any
+  details?: unknown
 
-  constructor(message: string, status?: number, details?: any) {
+  constructor(message: string, status?: number, details?: unknown) {
     super(message)
     this.name = "ApiError"
     this.status = status
@@ -66,7 +66,7 @@ export interface ApiResponse<T> {
 async function fetchApi<T>(
   endpoint: string,
   method: "get" | "post" | "put" | "delete" | "patch" = "get",
-  data?: any,
+  data?: unknown,
   config?: AxiosRequestConfig,
 ): Promise<T> {
   try {

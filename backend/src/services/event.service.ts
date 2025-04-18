@@ -4,6 +4,12 @@ import { WebSocketService } from "./websocket.service"
 import { SessionService } from "./session.service"
 
 export class EventService {
+
+  // Add this method in EventService class
+  static async getEvents(limit = 100, offset = 0): Promise<Event[]> {
+    return EventModel.getEvents(limit, offset)
+  }
+
   static async createEvent(event: Event): Promise<Event> {
     try {
       // Ensure we have a valid session before creating the event

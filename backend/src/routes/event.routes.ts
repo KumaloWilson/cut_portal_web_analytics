@@ -6,6 +6,9 @@ const router = Router()
 // Create a new event
 router.post("/", EventController.createEvent)
 
+// Get all events with pagination
+router.get("/", EventController.getEvents)  // Add this line for the missing endpoint
+
 // Get events for a session
 router.get("/session/:sessionId", EventController.getEventsBySessionId)
 

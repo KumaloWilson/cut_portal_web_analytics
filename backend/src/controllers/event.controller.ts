@@ -13,6 +13,21 @@ export class EventController {
     }
   }
 
+  // Add this method in EventController class
+static async getEvents(req: Request, res: Response): Promise<void> {
+  try {
+    const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 100
+    const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : 0
+    
+    const events = await EventService.getEvents(limit, offset)
+    res.status(200).json(events)
+  } catch (error) {
+    console.error("Error fetching events:", error)
+    res.status(500).json({ error: "Failed to fetch events" })
+  }
+}
+
+
   static async getEventsBySessionId(req: Request, res: Response): Promise<void> {
     try {
       const { sessionId } = req.params

@@ -59,13 +59,17 @@ export class SessionModel {
       const existingSession = await this.findById(session.session_id)
       if (existingSession) {
         // If session exists, update it instead
-        return this.update({
+        const updatedSession = await this.update({
           ...session,
           // Keep existing values if not provided in the update
           end_time: session.end_time || existingSession.end_time,
           total_time_spent: session.total_time_spent || existingSession.total_time_spent,
           pages_visited: session.pages_visited || existingSession.pages_visited,
         })
+        if (!updatedSession) {
+          throw new Error(`Failed to update session ${session.session_id}`)
+        }
+        return updatedSession
       }
 
       const { session_id, student_id, start_time, user_agent } = session

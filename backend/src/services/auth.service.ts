@@ -20,9 +20,7 @@ export class AuthService {
       }
 
       // Generate JWT token
-      const token = jwt.sign({ id: admin.id, email: admin.email, username: admin.username }, JWT_SECRET, {
-        expiresIn: JWT_EXPIRES_IN,
-      })
+      const token = this.generateToken(admin);
 
       // Remove password from admin object
       const { password: _, ...adminWithoutPassword } = admin
@@ -76,4 +74,20 @@ export class AuthService {
       return null
     }
   }
+
+  static generateToken(admin: Admin): string {
+    const secretKey = process.env.JWT_SECRET || "your-secret-key"
+    const expiresIn = "24h"
+
+    return jwt.sign(
+      {
+        id: admin.id,
+        email: admin.email,
+        username: admin.username
+      },
+      secretKey,
+      { expiresIn },
+    )
+  }
+
 }

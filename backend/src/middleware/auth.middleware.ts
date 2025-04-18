@@ -17,13 +17,15 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     const token = authHeader && authHeader.split(" ")[1]
 
     if (!token) {
-      return res.status(401).json({ message: "Access denied. No token provided." })
+      res.status(401).json({ message: "Access denied. No token provided." })
+      return 
     }
 
     // Verify token
     const decoded = AuthService.verifyToken(token)
     if (!decoded) {
-      return res.status(401).json({ message: "Invalid token." })
+       res.status(401).json({ message: "Invalid token." })
+       return
     }
 
     // Add user to request

@@ -2,7 +2,7 @@ import ExcelJS from "exceljs"
 import { anonymizeData } from "./anonymize.service"
 
 export class ExportService {
-  static async exportToExcel(data: any[], type: "students" | "events" | "sessions", anonymize = true): Promise<Buffer> {
+  static async exportToExcel(data: any[], type: "students" | "events" | "sessions", anonymize = true): Promise<ExcelJS.Buffer> {
     // Anonymize data if requested
     const processedData = anonymize ? anonymizeData(data, type) : data
 
@@ -40,13 +40,15 @@ export class ExportService {
       // Auto-fit columns
       worksheet.columns.forEach((column) => {
         let maxLength = 0
-        column.eachCell({ includeEmpty: true }, (cell) => {
-          const columnLength = cell.value ? cell.value.toString().length : 10
-          if (columnLength > maxLength) {
-            maxLength = columnLength
-          }
-        })
-        column.width = maxLength < 10 ? 10 : maxLength + 2
+        if (column?.eachCell) {
+          column.eachCell({ includeEmpty: true }, (cell) => {
+            const columnLength = cell.value ? cell.value.toString().length : 10
+            if (columnLength > maxLength) {
+              maxLength = columnLength
+            }
+          })
+          column.width = maxLength < 10 ? 10 : maxLength + 2
+        }
       })
     }
 
@@ -54,3 +56,4 @@ export class ExportService {
     return await workbook.xlsx.writeBuffer()
   }
 }
+

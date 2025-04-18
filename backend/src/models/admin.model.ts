@@ -11,6 +11,9 @@ export interface Admin {
 }
 
 export class AdminModel {
+  id: any
+  email: any
+  username: any
   static async findById(id: number): Promise<Admin | null> {
     const result = await pool.query("SELECT * FROM admins WHERE id = $1", [id])
     return result.rows[0] || null
@@ -80,7 +83,7 @@ export class AdminModel {
 
   static async delete(id: number): Promise<boolean> {
     const result = await pool.query("DELETE FROM admins WHERE id = $1", [id])
-    return result.rowCount > 0
+    return (result.rowCount ?? 0) > 0
   }
 
   static async validatePassword(admin: Admin, password: string): Promise<boolean> {

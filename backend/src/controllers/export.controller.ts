@@ -20,10 +20,12 @@ export class ExportController {
           "Content-Disposition",
           `attachment; filename=students_${new Date().toISOString().split("T")[0]}.xlsx`,
         )
-        return res.send(buffer)
+         res.send(buffer)
+         return
       } else {
         // Default to JSON
-        return res.json({ students })
+         res.json({ students })
+         return
       }
     } catch (error) {
       console.error("Export students error:", error)
@@ -56,10 +58,12 @@ export class ExportController {
           "Content-Disposition",
           `attachment; filename=events_${new Date().toISOString().split("T")[0]}.xlsx`,
         )
-        return res.send(buffer)
+         res.send(buffer)
+         return
       } else {
         // Default to JSON
-        return res.json({ events })
+         res.json({ events })
+         return
       }
     } catch (error) {
       console.error("Export events error:", error)
@@ -90,10 +94,12 @@ export class ExportController {
           "Content-Disposition",
           `attachment; filename=sessions_${new Date().toISOString().split("T")[0]}.xlsx`,
         )
-        return res.send(buffer)
+         res.send(buffer)
+         return
       } else {
         // Default to JSON
-        return res.json({ sessions })
+         res.json({ sessions })
+         return
       }
     } catch (error) {
       console.error("Export sessions error:", error)

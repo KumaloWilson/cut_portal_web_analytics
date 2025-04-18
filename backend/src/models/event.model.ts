@@ -29,7 +29,8 @@ export class EventModel {
       return result.rows[0]
     } catch (error) {
       // If it's a foreign key violation, we'll handle it at the service level
-      if (error.code === "23503" && error.constraint === "events_session_id_fkey") {
+      if ((error as { code: string; constraint: string }).code === "23503" && 
+          (error as { code: string; constraint: string }).constraint === "events_session_id_fkey") {
         throw new Error(`Session with ID ${event.session_id} does not exist`)
       }
       console.error(`Error in create for event:`, error)
@@ -112,7 +113,7 @@ export class EventModel {
           )
           successCount++
         } catch (error) {
-          console.error(`Error inserting event in bulkCreate: ${error.message}`)
+          console.error(`Error inserting event in bulkCreate: ${error instanceof Error ? error.message : 'Unknown error'}`)
           // Continue with other events even if one fails
         }
       }

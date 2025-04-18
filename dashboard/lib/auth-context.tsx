@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import axios from "axios"
 import { API_BASE_URL } from "./api"
@@ -29,19 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  // Check if user is logged in on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token")
-    if (storedToken) {
-      setToken(storedToken)
-      fetchCurrentAdmin(storedToken)
-    } else {
-      setIsLoading(false)
-    }
-  }, [])
-
-  // Fetch current admin data
-  const fetchCurrentAdmin = async (authToken: string) => {
+  // Memoize fetchCurrentAdmin to prevent unnecessary re-renders
+  const fetchCurrentAdmin = useCallback(async (authToken: string) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: {
@@ -55,7 +44,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout()
       setIsLoading(false)
     }
-  }
+  }, []) // Empty dependency array since logout is defined within component scope
+
+  // Memoize logout to avoid circular dependency issues
+  const logout = useCallback(() => {
+    localStorage.removeItem("token")
+    setToken(null)
+    setAdmin(null)
+    delete axios.defaults.headers.common["Authorization"]
+    router.push("/login")
+  }, [router])
+
+  // Fix the dependency array
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token")
+    if (storedToken) {
+      setToken(storedToken)
+      fetchCurrentAdmin(storedToken)
+    } else {
+      setIsLoading(false)
+    }
+  }, [fetchCurrentAdmin])
 
   // Login function
   const login = async (email: string, password: string) => {
@@ -86,15 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
       throw error
     }
-  }
-
-  // Logout function
-  const logout = () => {
-    localStorage.removeItem("token")
-    setToken(null)
-    setAdmin(null)
-    delete axios.defaults.headers.common["Authorization"]
-    router.push("/login")
   }
 
   // Register admin function

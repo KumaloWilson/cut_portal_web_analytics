@@ -2,6 +2,8 @@
  * Utility functions for anonymizing student data for exports
  */
 
+import { Student, EventType, Session, StudentEngagement } from "@/types"
+
 // Generate a consistent but anonymous ID based on the original ID
 export function anonymizeId(id: string): string {
   // Create a simple hash of the ID to maintain consistency
@@ -17,7 +19,7 @@ export function anonymizeId(id: string): string {
 }
 
 // Anonymize a student object
-export function anonymizeStudent(student: any): any {
+export function anonymizeStudent(student: Student): Student {
   return {
     ...student,
     student_id: anonymizeId(student.student_id),
@@ -33,7 +35,7 @@ export function anonymizeStudent(student: any): any {
 }
 
 // Anonymize an event object
-export function anonymizeEvent(event: any): any {
+export function anonymizeEvent(event: EventType): EventType {
   return {
     ...event,
     student_id: event.student_id ? anonymizeId(event.student_id) : null,
@@ -42,26 +44,69 @@ export function anonymizeEvent(event: any): any {
 }
 
 // Anonymize a session object
-export function anonymizeSession(session: any): any {
+export function anonymizeSession(session: Session): Session {
   return {
     ...session,
-    student_id: session.student_id ? anonymizeId(session.student_id) : null,
+    student_id: session.student_id ? anonymizeId(session.student_id) : anonymizeId('unknown'),
     // Keep other fields as they don't contain personal information
   }
 }
 
+// Anonymize a student engagement object
+export function anonymizeStudentEngagement(engagement: StudentEngagement): StudentEngagement {
+  return {
+    ...engagement,
+    student_id: anonymizeId(engagement.student_id),
+    first_name: "Student",
+    surname: anonymizeId(engagement.student_id).substring(0, 8),
+    // Keep non-personal statistical fields
+    faculty_name: engagement.faculty_name,
+    session_count: engagement.session_count,
+    total_time_spent: engagement.total_time_spent,
+    event_count: engagement.event_count
+  }
+}
+
+// Type for the data arrays passed to anonymizeData function
+type DataType<T> = T extends "students" 
+  ? Student[]
+  : T extends "events"
+  ? EventType[]
+  : T extends "sessions"
+  ? Session[]
+  : T extends "student_engagements"
+  ? StudentEngagement[]
+  : never;
+
+// Type for the return value from anonymizeData
+type AnonymizedData<T> = T extends "students" 
+  ? Student[]
+  : T extends "events"
+  ? EventType[]
+  : T extends "sessions"
+  ? Session[]
+  : T extends "student_engagements"
+  ? StudentEngagement[]
+  : never;
+
 // Anonymize an array of data objects based on type
-export function anonymizeData(data: any[], type: "students" | "events" | "sessions"): any[] {
-  if (!data || !Array.isArray(data)) return []
+export function anonymizeData<T extends "students" | "events" |  "student_engagements" | "sessions">(
+  data: DataType<T>, 
+  type: T
+): AnonymizedData<T> {
+  if (!data || !Array.isArray(data)) return ([] as unknown) as AnonymizedData<T>
 
   switch (type) {
     case "students":
-      return data.map(anonymizeStudent)
+      return data.map(item => anonymizeStudent(item as Student)) as AnonymizedData<T>
     case "events":
-      return data.map(anonymizeEvent)
+      return data.map(item => anonymizeEvent(item as EventType)) as AnonymizedData<T>
+    case "student_engagements":
+      return data.map(item => anonymizeStudentEngagement(item as StudentEngagement)) as AnonymizedData<T>  
+    
     case "sessions":
-      return data.map(anonymizeSession)
-    default:
-      return data
+      return data.map(item => anonymizeSession(item as Session)) as AnonymizedData<T>
+     default:
+      return data as AnonymizedData<T>
   }
 }

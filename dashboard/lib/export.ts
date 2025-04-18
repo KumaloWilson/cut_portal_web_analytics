@@ -1,9 +1,10 @@
+import { Student, EventType, Session, StudentEngagement } from "@/types"
 import { anonymizeData } from "./anonymize"
 
 /**
  * Convert an array of objects to CSV format
  */
-export function objectsToCSV(data: any[]): string {
+export function objectsToCSV<T extends Record<string, unknown>>(data: T[]): string {
   if (!data || data.length === 0) return ""
 
   // Get headers from the first object
@@ -27,15 +28,21 @@ export function objectsToCSV(data: any[]): string {
   return csvRows.join("\n")
 }
 
+type DataType = "students" | "events" | "sessions"
+
 /**
  * Export data to CSV with anonymization
  */
-export function exportToCSV(data: any[], type: "students" | "events" | "sessions", filename: string): void {
+export function exportToCSV<T extends Student | EventType | Session | StudentEngagement>(
+  data: T extends Student ? Student[] : T extends EventType ? EventType[] : T extends StudentEngagement ? StudentEngagement[] : Session[], 
+  type: DataType, 
+  filename: string
+): void {
   // Anonymize the data
   const anonymizedData = anonymizeData(data, type)
 
   // Convert to CSV
-  const csv = objectsToCSV(anonymizedData)
+  const csv = objectsToCSV(anonymizedData as unknown as Record<string, unknown>[])
 
   // Create a blob and download link
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })

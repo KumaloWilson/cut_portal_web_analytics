@@ -17,6 +17,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  TooltipProps,
 } from "recharts"
 import { cn } from "@/lib/utils"
 
@@ -57,13 +58,14 @@ export function ChartContainer({ config, className, children, ...props }: ChartC
     </div>
   )
 }
-
-interface ChartTooltipProps extends React.ComponentProps<typeof Tooltip> {
-  content?: React.ReactNode
+interface ChartTooltipProps {
+  content?: TooltipProps<string | number | (string | number)[], string>['content'];
+  formatter?: TooltipProps<string | number | (string | number)[], string>['formatter'];
+  [key: string]: unknown;
 }
 
 export function ChartTooltip({ content = <ChartTooltipContent />, ...props }: ChartTooltipProps) {
-  return <Tooltip content={content} {...props} />
+  return <Tooltip<string | number | (string | number)[], string> content={content} {...props} />
 }
 
 interface ChartTooltipContentProps {
@@ -102,7 +104,7 @@ export function ChartTooltipContent({ active, payload, label }: ChartTooltipCont
 }
 
 interface AreaChartProps {
-  data: any[]
+  data: unknown[]
   categories: string[]
   index: string
   colors?: string[]
@@ -159,7 +161,7 @@ export function AreaChart({
 }
 
 interface BarChartProps {
-  data: any[]
+  data: unknown[]
   categories: string[]
   index: string
   colors?: string[]
@@ -202,7 +204,7 @@ export function BarChart({
 }
 
 interface LineChartProps {
-  data: any[]
+  data: unknown[]
   categories: string[]
   index: string
   colors?: string[]
@@ -251,7 +253,7 @@ export function LineChart({
 }
 
 interface PieChartProps {
-  data: any[]
+  data: unknown[]
   category: string
   index: string
   colors?: string[]

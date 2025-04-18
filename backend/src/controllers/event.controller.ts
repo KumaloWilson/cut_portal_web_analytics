@@ -54,4 +54,17 @@ export class EventController {
       res.status(500).json({ error: "Failed to insert events" })
     }
   }
+
+  static async getRecentEvents(req: Request, res: Response): Promise<void> {
+    try {
+      const minutes = req.query.minutes ? Number.parseInt(req.query.minutes as string) : 30
+      const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 100
+      
+      const events = await EventService.getRecentEvents(minutes, limit)
+      res.status(200).json(events)
+    } catch (error) {
+      console.error("Error fetching recent events:", error)
+      res.status(500).json({ error: "Failed to fetch recent events" })
+    }
+  }
 }

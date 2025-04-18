@@ -15,4 +15,7 @@ router.get("/student/:studentId", EventController.getEventsByStudentId)
 // Bulk insert events
 router.post("/bulk", EventController.bulkCreateEvents)
 
+// Get recent events
+router.get("/recent", EventController.getRecentEvents)
+
 export default router

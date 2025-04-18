@@ -118,4 +118,8 @@ export class EventService {
   static async getEventsByTimeOfDay(): Promise<any[]> {
     return EventModel.getEventsByTimeOfDay()
   }
+  
+  static async getRecentEvents(minutes: number, limit = 100): Promise<Event[]> {
+    return EventModel.getRecentEvents(minutes, limit)
+  }
 }

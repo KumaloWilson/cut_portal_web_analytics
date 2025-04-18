@@ -1,7 +1,7 @@
 import { type Session, SessionModel } from "../models/session.model"
 import { StudentModel } from "../models/student.model"
 import { AnalyticsModel } from "../models/analytics.model"
-import { WebSocketService } from "./socket.service"
+import { WebSocketService } from "./websocket.service"
 
 export class SessionService {
   static async createSession(session: Session): Promise<Session> {
@@ -10,11 +10,7 @@ export class SessionService {
       const existingSession = await SessionModel.findById(session.session_id)
       if (existingSession) {
         console.log(`Session ${session.session_id} already exists, updating instead of creating`)
-        const updatedSession = await this.updateSession(session)
-        if (!updatedSession) {
-          throw new Error(`Failed to update session ${session.session_id}`)
-        }
-        return updatedSession
+        return this.updateSession(session)
       }
 
       // If session_id is null or empty, generate a UUID
@@ -97,11 +93,6 @@ export class SessionService {
     return SessionModel.findByStudentId(studentId)
   }
 
-  static async getSessions(): Promise<Session[]> {
-    const sessions = await SessionModel.findAll()
-    return Array.isArray(sessions) ? sessions : ([sessions].filter((s): s is Session => s !== null))
-  }
-
   static async getSessionById(sessionId: string): Promise<Session | null> {
     return SessionModel.findById(sessionId)
   }
@@ -113,4 +104,3 @@ export class SessionService {
     return { count, avgTime }
   }
 }
-

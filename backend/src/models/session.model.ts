@@ -13,16 +13,6 @@ export interface Session {
 }
 
 export class SessionModel {
-  static async findAll(): Promise<Session | null> {
-    try {
-      const result = await pool.query("SELECT * FROM sessions")
-      return result?.rows && result.rows.length > 0 ? result.rows[0] : null
-    } catch (error) {
-      console.error(`Error`, error)
-      throw error
-    }
-  }
-
   static async findById(sessionId: string): Promise<Session | null> {
     try {
       const result = await pool.query("SELECT * FROM sessions WHERE session_id = $1", [sessionId])
@@ -48,23 +38,34 @@ export class SessionModel {
     }
   }
 
+  static async getAllSessions(limit = 1000, offset = 0): Promise<Session[]> {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM sessions 
+         ORDER BY start_time DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset],
+      )
+      return result.rows
+    } catch (error) {
+      console.error(`Error in getAllSessions:`, error)
+      throw error
+    }
+  }
+
   static async create(session: Session): Promise<Session> {
     try {
       // Check if session already exists
       const existingSession = await this.findById(session.session_id)
       if (existingSession) {
         // If session exists, update it instead
-        const updatedSession = await this.update({
+        return this.update({
           ...session,
           // Keep existing values if not provided in the update
           end_time: session.end_time || existingSession.end_time,
           total_time_spent: session.total_time_spent || existingSession.total_time_spent,
           pages_visited: session.pages_visited || existingSession.pages_visited,
         })
-        if (!updatedSession) {
-          throw new Error(`Failed to update session ${session.session_id}`)
-        }
-        return updatedSession
       }
 
       const { session_id, student_id, start_time, user_agent } = session
@@ -158,4 +159,3 @@ export class SessionModel {
     }
   }
 }
-

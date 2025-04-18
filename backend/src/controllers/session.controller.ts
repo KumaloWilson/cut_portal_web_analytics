@@ -29,16 +29,6 @@ export class SessionController {
       res.status(500).json({ error: 'Failed to update session' });
     }
   }
-
-  static async getSessions(req: Request, res: Response): Promise<void> {
-    try {
-      const sessions = await SessionService.getSessions();
-      res.status(200).json(sessions);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      res.status(500).json({ error: 'Failed to fetch sessions' });
-    }
-  }
   
   static async getSessionsByStudentId(req: Request, res: Response): Promise<void> {
     try {

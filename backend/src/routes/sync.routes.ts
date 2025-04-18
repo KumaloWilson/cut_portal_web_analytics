@@ -7,4 +7,3 @@ const router = Router()
 router.post("/", SyncController.syncData)
 
 export default router
-

@@ -1,7 +1,7 @@
 import { type Event, EventModel } from "../models/event.model"
 import { AnalyticsModel } from "../models/analytics.model"
+import { WebSocketService } from "./websocket.service"
 import { SessionService } from "./session.service"
-import { WebSocketService } from "./socket.service"
 
 export class EventService {
   static async createEvent(event: Event): Promise<Event> {
@@ -77,11 +77,6 @@ export class EventService {
     return EventModel.findBySessionId(sessionId)
   }
 
-
-  static async getEvents(): Promise<Event[]> {
-    return EventModel.findEvents()
-  }
-
   static async getEventsByStudentId(studentId: string, limit = 100, offset = 0): Promise<Event[]> {
     return EventModel.findByStudentId(studentId, limit, offset)
   }
@@ -124,4 +119,3 @@ export class EventService {
     return EventModel.getEventsByTimeOfDay()
   }
 }
-

@@ -19,4 +19,3 @@ router.post("/:studentId/modules", StudentController.addModulesToStudent)
 router.get("/:studentId/modules", StudentController.getStudentModules)
 
 export default router
-

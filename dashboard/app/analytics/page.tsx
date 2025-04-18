@@ -14,7 +14,7 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
+  CartesianGrid,  
   Tooltip,
   Legend,
   PieChart,

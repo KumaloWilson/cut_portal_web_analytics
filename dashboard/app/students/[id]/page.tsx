@@ -192,7 +192,7 @@ export default function StudentDetailPage() {
                   <span className="text-muted-foreground">Total Time:</span>
                   <span className="font-medium">
                     {Math.floor(
-                      sessions?.reduce((total, session) => total + (session.total_time_spent || 0), 0) / 60 || 0,
+                      (sessions?.reduce((total, session) => total + (session.total_time_spent || 0), 0) ?? 0) / 60,
                     )}{" "}
                     minutes
                   </span>

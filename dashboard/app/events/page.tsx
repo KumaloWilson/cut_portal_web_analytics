@@ -406,8 +406,88 @@ export default function EventsPage() {
                         <div className="col-span-1 text-right">
                           <Button variant="ghost" size="icon">
                             <ChevronRight className="h-4" />
-I&#x27;ll implement these features for you. Let&#x27;s enhance the dashboard with better graphs, add detailed views for students and events, and create an export functionality with anonymization.
+                            </Button>
+                        </div>
+                      </motion.div>
+                    ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-First, let&#x27;s create a utility for data anonymization that we&#x27;ll use for exports:
-
-\
+      {/* Event Detail Modal */}
+      {isDetailModalOpen && selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  {getEventIcon(selectedEvent.event_type)}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedEvent.event_type.replace(/_/g, " ")}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedEvent.page_title || selectedEvent.path}</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsDetailModalOpen(false)}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </Button>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Timestamp</h4>
+                <p className="text-sm">{format(parseISO(selectedEvent.timestamp), "MMMM d, yyyy h:mm:ss a")}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Session ID</h4>
+                <p className="text-sm font-mono">{selectedEvent.session_id}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Student ID</h4>
+                <p className="text-sm">{selectedEvent.student_id || "Anonymous"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">URL</h4>
+                <p className="text-sm truncate" title={selectedEvent.url}>
+                  {selectedEvent.url}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Path</h4>
+                <p className="text-sm">{selectedEvent.path}</p>
+              </div>
+              {selectedEvent.details && (
+                <div className="col-span-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Details</h4>
+                  <pre className="bg-muted p-3 rounded-md overflow-auto text-xs">
+                    {JSON.stringify(selectedEvent.details, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  )
+}

@@ -5,7 +5,7 @@ import React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { io, type Socket } from "socket.io-client"
 import { toast } from "sonner"
-import {SOCKET_BASE_URL } from '../lib/api';
+import { SOCKET_BASE_URL } from '../lib/api';
 
 interface SocketContextType {
   socket: Socket | null
@@ -56,7 +56,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socketInstance.disconnect()
     }
-  })
+  }, []) // Added empty dependency array here
 
   return <SocketContext.Provider value={{ socket, isConnected }}>{children}</SocketContext.Provider>
 }

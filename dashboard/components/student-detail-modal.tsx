@@ -205,7 +205,7 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
                       </div>
                       <span className="font-bold">
                         {Math.floor(
-                          sessions?.reduce((total, session) => total + (session.total_time_spent || 0), 0) / 60 || 0,
+                          (sessions || []).reduce((total, session) => total + (session.total_time_spent || 0), 0) / 60 || 0,
                         )}{" "}
                         minutes
                       </span>

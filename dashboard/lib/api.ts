@@ -16,6 +16,8 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse,
 // Base URL configuration
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 
+export const SOCKET_BASE_URL = process.env.NEXT_SOCKET_PUBLIC_API_URL || "http://localhost:5000"
+
 
 // export const API_BASE_URL =  "http://localhost:5000/api"
 

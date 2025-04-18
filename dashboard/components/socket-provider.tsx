@@ -5,7 +5,7 @@ import React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { io, type Socket } from "socket.io-client"
 import { toast } from "sonner"
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, SOCKET_BASE_URL } from '../lib/api';
 
 interface SocketContextType {
   socket: Socket | null
@@ -23,7 +23,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Connect to the WebSocket server
-    const socketInstance = io(API_BASE_URL, {
+    const socketInstance = io(SOCKET_BASE_URL, {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     })

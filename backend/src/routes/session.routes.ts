@@ -9,6 +9,12 @@ router.post("/", SessionController.createSession)
 // Update a session
 router.post("/update", SessionController.updateSession)
 
+// Get all sessions
+router.get("/", SessionController.getAllSessions)
+
+// Get active sessions
+router.get("/active", SessionController.getActiveSessions)
+
 // Get sessions for a student
 router.get("/student/:studentId", SessionController.getSessionsByStudentId)
 

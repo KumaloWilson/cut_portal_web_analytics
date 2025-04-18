@@ -30,6 +30,30 @@ export class SessionController {
     }
   }
   
+  static async getAllSessions(req: Request, res: Response): Promise<void> {
+    try {
+      // Get pagination parameters from query string with defaults
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 1000;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const sessions = await SessionService.getAllSessions(limit, offset);
+      res.status(200).json(sessions);
+    } catch (error) {
+      console.error('Error fetching all sessions:', error);
+      res.status(500).json({ error: 'Failed to fetch sessions' });
+    }
+  }
+  
+  static async getActiveSessions(req: Request, res: Response): Promise<void> {
+    try {
+      const activeSessions = await SessionService.getActiveSessions();
+      res.status(200).json(activeSessions);
+    } catch (error) {
+      console.error('Error fetching active sessions:', error);
+      res.status(500).json({ error: 'Failed to fetch active sessions' });
+    }
+  }
+  
   static async getSessionsByStudentId(req: Request, res: Response): Promise<void> {
     try {
       const { studentId } = req.params;

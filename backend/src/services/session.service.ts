@@ -71,6 +71,24 @@ export class SessionService {
     }
   }
 
+  static async getAllSessions(limit = 1000, offset = 0): Promise<Session[]> {
+    try {
+      return await SessionModel.getAllSessions(limit, offset)
+    } catch (error) {
+      console.error('Error in getAllSessions:', error)
+      throw error
+    }
+  }
+
+  static async getActiveSessions(): Promise<Session[]> {
+    try {
+      return await SessionModel.getActiveSessions()
+    } catch (error) {
+      console.error('Error in getActiveSessions:', error)
+      throw error
+    }
+  }
+
   static async getOrCreateSession(sessionId: string, studentId?: string, startTime?: Date): Promise<Session> {
     try {
       // Check if session exists
@@ -101,10 +119,11 @@ export class SessionService {
     return SessionModel.findById(sessionId)
   }
 
-  static async getSessionStats(): Promise<{ count: number; avgTime: number }> {
+  static async getSessionStats(): Promise<{ count: number; avgTime: number; activeSessions: number }> {
     const count = await SessionModel.getSessionCount()
     const avgTime = await SessionModel.getAverageSessionTime()
+    const activeSessions = await SessionModel.getActiveSessionsCount()
 
-    return { count, avgTime }
+    return { count, avgTime, activeSessions }
   }
 }

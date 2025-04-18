@@ -2,606 +2,564 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { motion } from "framer-motion"
-import { format, parseISO } from "date-fns"
-import { DashboardLayout } from "@/components/dashboard-layout"
-import {
-  getActivityOverTime,
-  getTopPages,
-  getStudentEngagement,
-  getModuleEngagement,
-  getTimeOfDayActivity,
-} from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AreaChart, BarChart, LineChart, PieChart } from "@/components/ui/chart"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Clock, Calendar, Users, BookOpen, Eye, MousePointerClick, FileText, Activity } from "lucide-react"
-import { ActivityData, ModuleEngagement, PageAnalytics, StudentEngagement, TimeOfDayActivity } from "@/types"
+import { Button } from "@/components/ui/button"
+import { Download, FileDown } from "lucide-react"
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { fetchAnalytics, fetchStudentEngagement, fetchModuleEngagement, fetchEventDistribution } from "@/lib/api"
+import { exportToCSV } from "@/lib/export"
+import { anonymizeData } from "@/lib/anonymize"
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"]
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState<number>(30)
+  const [activeTab, setActiveTab] = useState("overview")
 
-  // Fetch activity data
-  const { data: activityData, isLoading: isLoadingActivity } = useQuery({
-    queryKey: ["activity", timeRange],
-    queryFn: async () => {
-      const response = await getActivityOverTime(timeRange)
-
-      console.log("ACTIVITY RESPONSE",response);
-      return response
-    },
+  const { data: analyticsData, isLoading: isLoadingAnalytics } = useQuery({
+    queryKey: ["analytics"],
+    queryFn: fetchAnalytics,
   })
 
-  // Fetch top pages
-  const { data: topPages, isLoading: isLoadingTopPages } = useQuery({
-    queryKey: ["topPages"],
-    queryFn: async () => {
-      const response = await getTopPages(10)
-      console.log("TOP PAGES RESPONSE",response);
-      return response
-    },
-  })
-
-  // Fetch student engagement
   const { data: studentEngagement, isLoading: isLoadingStudentEngagement } = useQuery({
     queryKey: ["studentEngagement"],
-    queryFn: async () => {
-      const response = await getStudentEngagement()
-      console.log("STUDENT ENGAGEMENT RESPONSE",response);
-      return response
-    },
+    queryFn: fetchStudentEngagement,
   })
 
-  // Fetch module engagement
   const { data: moduleEngagement, isLoading: isLoadingModuleEngagement } = useQuery({
     queryKey: ["moduleEngagement"],
-    queryFn: async () => {
-      const response = await getModuleEngagement()
-      console.log("MODULE ENGAGEMENT RESPONSE",response);
-      return response
-    },
+    queryFn: fetchModuleEngagement,
   })
 
-  // Fetch time of day activity
-  const { data: timeOfDayActivity, isLoading: isLoadingTimeOfDay } = useQuery({
-    queryKey: ["timeOfDayActivity"],
-    queryFn: async () => {
-      const response = await getTimeOfDayActivity()
-      console.log("TIME OF DAY ACTIVITY RESPONSE",response);
-      return response
-    },
+  const { data: eventDistribution, isLoading: isLoadingEventDistribution } = useQuery({
+    queryKey: ["eventDistribution"],
+    queryFn: fetchEventDistribution,
   })
 
-  // Format activity data for charts
-  const formattedActivityData =
-    activityData?.map((item: ActivityData) => ({
-      date: format(parseISO(item.date), "MMM dd"),
-      sessions: item.sessions,
-      pageViews: item.page_views,
-      interactions: item.interactions,
-    })) || []
-
-  // Format time of day data
-  const formattedTimeOfDayData =
-    timeOfDayActivity?.map((item: TimeOfDayActivity) => ({
-      hour: `${item.hour}:00`,
-      events: item.event_count,
-    })) || []
-
-  // Format student engagement data
-  const formattedStudentEngagement =
-    studentEngagement?.slice(0, 10).map((student: StudentEngagement) => ({
-      name: `${student.first_name} ${student.surname}`,
-      sessions: student.session_count,
-      timeSpent: Math.floor(student.total_time_spent / 60), // Convert to minutes
-      events: student.event_count,
-    })) || []
-
-  // Format module engagement data
-  const formattedModuleEngagement =
-    moduleEngagement?.slice(0, 10).map((module: ModuleEngagement) => ({
-      name: module.module_code,
-      students: module.student_count,
-      events: module.event_count,
-    })) || []
+  const handleExportData = (data, filename) => {
+    const anonymizedData = anonymizeData(data)
+    exportToCSV(anonymizedData, filename)
+  }
 
   return (
-    <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground">Comprehensive analytics and insights</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            value={timeRange}
-            onChange={(e) => setTimeRange(Number(e.target.value))}
-          >
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-          </select>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+        <Button
+          variant="outline"
+          onClick={() => handleExportData(analyticsData, "analytics-export")}
+          disabled={isLoadingAnalytics}
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          Export Data
+        </Button>
       </div>
 
-      <Tabs defaultValue="overview" className="mb-6">
-        <TabsList>
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-4 mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="students">Students</TabsTrigger>
-          <TabsTrigger value="modules">Modules</TabsTrigger>
-          <TabsTrigger value="pages">Pages</TabsTrigger>
+          <TabsTrigger value="students">Student Engagement</TabsTrigger>
+          <TabsTrigger value="modules">Module Performance</TabsTrigger>
+          <TabsTrigger value="events">Event Analysis</TabsTrigger>
         </TabsList>
-        <TabsContent value="overview" className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2">
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Activity Overview</CardTitle>
-                <CardDescription>Sessions, page views, and interactions over time</CardDescription>
+                <CardTitle>Daily Active Users</CardTitle>
+                <CardDescription>Number of active students per day</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingActivity ? (
-                  <Skeleton className="h-[350px] w-full" />
+              <CardContent className="h-80">
+                {isLoadingAnalytics ? (
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <AreaChart
-                    data={formattedActivityData}
-                    categories={["sessions", "pageViews", "interactions"]}
-                    index="date"
-                    colors={["blue", "green", "amber"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      users: {
+                        label: "Active Users",
+                        color: "hsl(var(--chart-1))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={analyticsData?.dailyActiveUsers || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="var(--color-users)"
+                          name="Active Users"
+                          activeDot={{ r: 8 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Activity by Time of Day</CardTitle>
-                <CardDescription>Event distribution across hours of the day</CardDescription>
+                <CardTitle>Session Duration</CardTitle>
+                <CardDescription>Average session duration in minutes</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingTimeOfDay ? (
-                  <Skeleton className="h-[350px] w-full" />
+              <CardContent className="h-80">
+                {isLoadingAnalytics ? (
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <BarChart
-                    data={formattedTimeOfDayData}
-                    categories={["events"]}
-                    index="hour"
-                    colors={["blue"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      duration: {
+                        label: "Duration (min)",
+                        color: "hsl(var(--chart-2))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData?.sessionDuration || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="avgDuration" fill="var(--color-duration)" name="Duration (min)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Pages</CardTitle>
-                <CardDescription>Most visited pages on the platform</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingTopPages ? (
-                  <Skeleton className="h-[350px] w-full" />
-                ) : (
-                  <BarChart
-                    data={
-                      topPages?.map((page: { page_title: unknown; page_path: string; view_count: unknown }) => ({
-                        page: page.page_title || page.page_path.split("/").pop() || page.page_path,
-                        views: page.view_count,
-                      })) || []
-                    }
-                    categories={["views"]}
-                    index="page"
-                    colors={["green"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Event Distribution</CardTitle>
-                <CardDescription>Breakdown of event types</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PieChart
-                  data={[
-                    { name: "Page Views", value: 45 },
-                    { name: "Clicks", value: 30 },
-                    { name: "Form Submits", value: 10 },
-                    { name: "Downloads", value: 8 },
-                    { name: "Other", value: 7 },
-                  ]}
-                  category="value"
-                  index="name"
-                  className="h-[350px]"
-                />
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Event Distribution</CardTitle>
+              <CardDescription>Distribution of event types</CardDescription>
+            </CardHeader>
+            <CardContent className="h-80">
+              {isLoadingEventDistribution ? (
+                <div className="flex items-center justify-center h-full">Loading...</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={eventDistribution || []}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={120}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="type"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {(eventDistribution || []).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name, props) => [`${value} events`, props.payload.type]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
-        <TabsContent value="students" className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2">
+
+        <TabsContent value="students" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Student Engagement Over Time</CardTitle>
+              <CardDescription>Tracking student activity levels</CardDescription>
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute top-4 right-4"
+                onClick={() => handleExportData(studentEngagement, "student-engagement-export")}
+                disabled={isLoadingStudentEngagement}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </CardHeader>
+            <CardContent className="h-96">
+              {isLoadingStudentEngagement ? (
+                <div className="flex items-center justify-center h-full">Loading...</div>
+              ) : (
+                <ChartContainer
+                  config={{
+                    engagement: {
+                      label: "Engagement Score",
+                      color: "hsl(var(--chart-3))",
+                    },
+                    events: {
+                      label: "Event Count",
+                      color: "hsl(var(--chart-4))",
+                    },
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={studentEngagement || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="week" />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Line
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="engagementScore"
+                        stroke="var(--color-engagement)"
+                        name="Engagement Score"
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="eventCount"
+                        stroke="var(--color-events)"
+                        name="Event Count"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Top Students by Engagement</CardTitle>
-                <CardDescription>Students with highest activity levels</CardDescription>
+                <CardTitle>Time Spent by Student</CardTitle>
+                <CardDescription>Total time spent on platform (hours)</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="h-80">
                 {isLoadingStudentEngagement ? (
-                  <Skeleton className="h-[350px] w-full" />
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <BarChart
-                    data={formattedStudentEngagement}
-                    categories={["sessions", "timeSpent", "events"]}
-                    index="name"
-                    colors={["blue", "green", "amber"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      time: {
+                        label: "Hours",
+                        color: "hsl(var(--chart-5))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={studentEngagement?.timeSpentByStudent || []} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis type="category" dataKey="studentId" tick={{ fontSize: 12 }} width={100} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="hours" fill="var(--color-time)" name="Hours" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Student Activity Trends</CardTitle>
-                <CardDescription>Activity patterns over time</CardDescription>
+                <CardTitle>Completion Rate</CardTitle>
+                <CardDescription>Module completion rate by student (%)</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingActivity ? (
-                  <Skeleton className="h-[350px] w-full" />
+              <CardContent className="h-80">
+                {isLoadingStudentEngagement ? (
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <LineChart
-                    data={formattedActivityData}
-                    categories={["sessions"]}
-                    index="date"
-                    colors={["blue"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      completion: {
+                        label: "Completion Rate",
+                        color: "hsl(var(--chart-6))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={studentEngagement?.completionRate || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="studentId" />
+                        <YAxis domain={[0, 100]} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="rate" fill="var(--color-completion)" name="Completion Rate" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Student Engagement Metrics</CardTitle>
-                <CardDescription>Detailed breakdown of student activity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <div className="grid grid-cols-12 border-b px-4 py-3 font-medium">
-                    <div className="col-span-4">Student</div>
-                    <div className="col-span-2 text-center">Sessions</div>
-                    <div className="col-span-2 text-center">Time Spent (min)</div>
-                    <div className="col-span-2 text-center">Page Views</div>
-                    <div className="col-span-2 text-center">Interactions</div>
-                  </div>
-                  {isLoadingStudentEngagement
-                    ? Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="grid grid-cols-12 items-center px-4 py-3 border-b">
-                          <div className="col-span-4">
-                            <Skeleton className="h-4 w-32" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                        </div>
-                      ))
-                    : studentEngagement?.slice(0, 10).map((student: StudentEngagement, index: number) => (
-                        <motion.div
-                          key={student.student_id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
-                        >
-                          <div className="col-span-4 flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                              <span className="text-sm font-medium text-primary">
-                                {student.first_name[0]}
-                                {student.surname[0]}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                {student.first_name} {student.surname}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{student.student_id}</p>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>{student.session_count}</span>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>{Math.floor(student.total_time_spent / 60)}</span>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                              <span>{Math.floor(student.event_count * 0.6)}</span>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                              <span>{Math.floor(student.event_count * 0.4)}</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
-        <TabsContent value="modules" className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2">
+
+        <TabsContent value="modules" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Module Engagement</CardTitle>
+              <CardDescription>Engagement metrics by module</CardDescription>
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute top-4 right-4"
+                onClick={() => handleExportData(moduleEngagement, "module-engagement-export")}
+                disabled={isLoadingModuleEngagement}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </CardHeader>
+            <CardContent className="h-96">
+              {isLoadingModuleEngagement ? (
+                <div className="flex items-center justify-center h-full">Loading...</div>
+              ) : (
+                <ChartContainer
+                  config={{
+                    views: {
+                      label: "Views",
+                      color: "hsl(var(--chart-1))",
+                    },
+                    timeSpent: {
+                      label: "Avg. Time (min)",
+                      color: "hsl(var(--chart-2))",
+                    },
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={moduleEngagement || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="moduleName" />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="views" fill="var(--color-views)" name="Views" />
+                      <Bar
+                        yAxisId="right"
+                        dataKey="avgTimeSpent"
+                        fill="var(--color-timeSpent)"
+                        name="Avg. Time (min)"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Top Modules by Engagement</CardTitle>
-                <CardDescription>Modules with highest student activity</CardDescription>
+                <CardTitle>Completion Rate by Module</CardTitle>
+                <CardDescription>Percentage of students who completed each module</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="h-80">
                 {isLoadingModuleEngagement ? (
-                  <Skeleton className="h-[350px] w-full" />
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <BarChart
-                    data={formattedModuleEngagement}
-                    categories={["students", "events"]}
-                    index="name"
-                    colors={["blue", "green"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      completion: {
+                        label: "Completion Rate",
+                        color: "hsl(var(--chart-3))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={moduleEngagement?.completionRate || []} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" domain={[0, 100]} />
+                        <YAxis type="category" dataKey="moduleName" width={150} tick={{ fontSize: 12 }} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="rate" fill="var(--color-completion)" name="Completion Rate" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Module Popularity</CardTitle>
-                <CardDescription>Distribution of student enrollment</CardDescription>
+                <CardTitle>Difficulty Rating</CardTitle>
+                <CardDescription>Average difficulty rating by module (1-5)</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="h-80">
                 {isLoadingModuleEngagement ? (
-                  <Skeleton className="h-[350px] w-full" />
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <PieChart
-                    data={
-                      moduleEngagement?.slice(0, 5).map((module: ModuleEngagement) => ({
-                        name: module.module_code,
-                        value: module.student_count,
-                      })) || []
-                    }
-                    category="value"
-                    index="name"
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      difficulty: {
+                        label: "Difficulty",
+                        color: "hsl(var(--chart-4))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={moduleEngagement?.difficultyRating || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="moduleName" />
+                        <YAxis domain={[0, 5]} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="rating" fill="var(--color-difficulty)" name="Difficulty" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Module Engagement Details</CardTitle>
-                <CardDescription>Detailed breakdown of module activity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <div className="grid grid-cols-12 border-b px-4 py-3 font-medium">
-                    <div className="col-span-4">Module</div>
-                    <div className="col-span-2 text-center">Code</div>
-                    <div className="col-span-2 text-center">Students</div>
-                    <div className="col-span-2 text-center">Events</div>
-                    <div className="col-span-2 text-center">Engagement Score</div>
-                  </div>
-                  {isLoadingModuleEngagement
-                    ? Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="grid grid-cols-12 items-center px-4 py-3 border-b">
-                          <div className="col-span-4">
-                            <Skeleton className="h-4 w-40" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-16 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-16 mx-auto" />
-                          </div>
-                        </div>
-                      ))
-                    : moduleEngagement?.slice(0, 10).map((module: ModuleEngagement, index: number) => (
-                        <motion.div
-                          key={module.module_id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
-                        >
-                          <div className="col-span-4 flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                              <BookOpen className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium truncate" title={module.module_name}>
-                                {module.module_name}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <span className="text-sm font-medium">{module.module_code}</span>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Users className="h-4 w-4 text-muted-foreground" />
-                              <span>{module.student_count}</span>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Activity className="h-4 w-4 text-muted-foreground" />
-                              <span>{module.event_count}</span>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium inline-block">
-                              {Math.floor((module.event_count / (module.student_count || 1)) * 10)}
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
-        <TabsContent value="pages" className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2">
+
+        <TabsContent value="events" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Event Distribution Over Time</CardTitle>
+              <CardDescription>Number of events by type over time</CardDescription>
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute top-4 right-4"
+                onClick={() => handleExportData(eventDistribution, "event-distribution-export")}
+                disabled={isLoadingEventDistribution}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </CardHeader>
+            <CardContent className="h-96">
+              {isLoadingEventDistribution ? (
+                <div className="flex items-center justify-center h-full">Loading...</div>
+              ) : (
+                <ChartContainer
+                  config={{
+                    pageView: {
+                      label: "Page Views",
+                      color: "hsl(var(--chart-1))",
+                    },
+                    click: {
+                      label: "Clicks",
+                      color: "hsl(var(--chart-2))",
+                    },
+                    scroll: {
+                      label: "Scrolls",
+                      color: "hsl(var(--chart-3))",
+                    },
+                    quiz: {
+                      label: "Quiz Attempts",
+                      color: "hsl(var(--chart-4))",
+                    },
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={eventDistribution?.byTime || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Line type="monotone" dataKey="pageView" stroke="var(--color-pageView)" name="Page Views" />
+                      <Line type="monotone" dataKey="click" stroke="var(--color-click)" name="Clicks" />
+                      <Line type="monotone" dataKey="scroll" stroke="var(--color-scroll)" name="Scrolls" />
+                      <Line type="monotone" dataKey="quiz" stroke="var(--color-quiz)" name="Quiz Attempts" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Top Pages</CardTitle>
-                <CardDescription>Most visited pages on the platform</CardDescription>
+                <CardTitle>Event Frequency by Hour</CardTitle>
+                <CardDescription>Distribution of events throughout the day</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingTopPages ? (
-                  <Skeleton className="h-[350px] w-full" />
+              <CardContent className="h-80">
+                {isLoadingEventDistribution ? (
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <BarChart
-                    data={
-                      topPages?.map((page: { page_title: unknown; page_path: string; view_count: unknown }) => ({
-                        page: page.page_title || page.page_path.split("/").pop() || page.page_path,
-                        views: page.view_count,
-                      })) || []
-                    }
-                    categories={["views"]}
-                    index="page"
-                    colors={["green"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      count: {
+                        label: "Event Count",
+                        color: "hsl(var(--chart-5))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={eventDistribution?.byHour || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="hour" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="count" fill="var(--color-count)" name="Event Count" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Page View Trends</CardTitle>
-                <CardDescription>Page view patterns over time</CardDescription>
+                <CardTitle>Event Duration</CardTitle>
+                <CardDescription>Average duration of events by type (seconds)</CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoadingActivity ? (
-                  <Skeleton className="h-[350px] w-full" />
+              <CardContent className="h-80">
+                {isLoadingEventDistribution ? (
+                  <div className="flex items-center justify-center h-full">Loading...</div>
                 ) : (
-                  <LineChart
-                    data={formattedActivityData}
-                    categories={["pageViews"]}
-                    index="date"
-                    colors={["green"]}
-                    valueFormatter={(value) => value.toString()}
-                    className="h-[350px]"
-                  />
+                  <ChartContainer
+                    config={{
+                      duration: {
+                        label: "Duration (sec)",
+                        color: "hsl(var(--chart-6))",
+                      },
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={eventDistribution?.duration || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="type" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar dataKey="avgDuration" fill="var(--color-duration)" name="Duration (sec)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Page Analytics</CardTitle>
-                <CardDescription>Detailed breakdown of page performance</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <div className="grid grid-cols-12 border-b px-4 py-3 font-medium">
-                    <div className="col-span-6">Page</div>
-                    <div className="col-span-2 text-center">Views</div>
-                    <div className="col-span-2 text-center">Avg. Time</div>
-                    <div className="col-span-2 text-center">Bounce Rate</div>
-                  </div>
-                  {isLoadingTopPages
-                    ? Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="grid grid-cols-12 items-center px-4 py-3 border-b">
-                          <div className="col-span-6">
-                            <Skeleton className="h-4 w-48" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-12 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-16 mx-auto" />
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <Skeleton className="h-4 w-16 mx-auto" />
-                          </div>
-                        </div>
-                      ))
-                    : topPages?.map((page: PageAnalytics, index: number) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
-                        >
-                          <div className="col-span-6 flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                              <FileText className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium truncate" title={page.page_path}>
-                                {page.page_title || page.page_path}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">{page.page_path}</p>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                              <span>{page.view_count}</span>
-                            </div>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <span className="text-sm">{Math.floor(Math.random() * 120) + 10}s</span>
-                          </div>
-                          <div className="col-span-2 text-center">
-                            <span className="text-sm">{Math.floor(Math.random() * 50) + 20}%</span>
-                          </div>
-                        </motion.div>
-                      ))}
-                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
-    </DashboardLayout>
+    </div>
   )
 }
-

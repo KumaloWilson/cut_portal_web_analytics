@@ -22,7 +22,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Connect to the WebSocket server
-    const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "https://cutanalyticsapi.onrender.com", {
+    const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000", {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     })
@@ -61,5 +61,3 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useSocket = () => useContext(SocketContext)
-
-

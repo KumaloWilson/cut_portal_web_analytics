@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { exportToCSV } from "@/lib/export"
 import {
   Search,
   Activity,
@@ -37,6 +38,8 @@ export default function EventsPage() {
   const [sortBy, setSortBy] = useState<string>("time")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [recentEvents, setRecentEvents] = useState<EventType[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // Fetch events data
   const { data: events, isLoading: isLoadingEvents } = useQuery({
@@ -122,6 +125,25 @@ export default function EventsPage() {
     }
   }
 
+  // Handle event click
+  const handleEventClick = (event: EventType) => {
+    setSelectedEvent(event)
+    setIsDetailModalOpen(true)
+  }
+
+  // Handle export
+  const handleExportEvents = () => {
+    if (events) {
+      exportToCSV(events, 'events', 'events_list')
+    }
+  }
+
+  const handleExportRecentEvents = () => {
+    if (recentEvents) {
+      exportToCSV(recentEvents, 'events', 'recent_events')
+    }
+  }
+
   // Get icon for event type
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -151,6 +173,10 @@ export default function EventsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Events</h1>
           <p className="text-muted-foreground">Track and analyze user interactions</p>
         </div>
+        <Button variant="outline" onClick={handleExportEvents}>
+          <Download className="mr-2 h-4 w-4" />
+          Export All Events
+        </Button>
       </div>
 
       <Tabs defaultValue="recent" className="mb-6">
@@ -166,9 +192,15 @@ export default function EventsPage() {
                   <CardTitle>Recent Events</CardTitle>
                   <CardDescription>Latest user interactions in real-time</CardDescription>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                  <span>Live</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                    <span>Live</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExportRecentEvents}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -213,7 +245,8 @@ export default function EventsPage() {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
+                      className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer"
+                      onClick={() => handleEventClick(event)}
                     >
                       <div className="col-span-2">
                         <div className="flex items-center gap-2">
@@ -340,7 +373,8 @@ export default function EventsPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.02 }}
-                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
+                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer"
+                        onClick={() => handleEventClick(event)}
                       >
                         <div className="col-span-2">
                           <div className="flex items-center gap-2">
@@ -371,17 +405,9 @@ export default function EventsPage() {
                         </div>
                         <div className="col-span-1 text-right">
                           <Button variant="ghost" size="icon">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </DashboardLayout>
-  )
-}
+                            <ChevronRight className="h-4" />
+I&#x27;ll implement these features for you. Let&#x27;s enhance the dashboard with better graphs, add detailed views for students and events, and create an export functionality with anonymization.
 
+First, let&#x27;s create a utility for data anonymization that we&#x27;ll use for exports:
+
+\

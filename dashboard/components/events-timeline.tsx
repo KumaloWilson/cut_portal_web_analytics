@@ -135,7 +135,7 @@ export function EventsTimeline({ events, isLoading }: EventsTimelineProps) {
               >
                 {getEventIcon(event.event_type)}
               </div>
-              <AvatarFallback>{getInitials(event.student_id ?? "")}</AvatarFallback>
+              <AvatarFallback>{getInitials(event.student_id)}</AvatarFallback>
             </Avatar>
 
             <div className="space-y-1">
@@ -158,4 +158,3 @@ export function EventsTimeline({ events, isLoading }: EventsTimelineProps) {
     </div>
   )
 }
-

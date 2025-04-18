@@ -14,14 +14,14 @@ import type {
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type AxiosError } from "axios"
 
 // Base URL configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://cutanalyticsapi.onrender.com/api" // "http://localhost:3000/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
 
 // Custom error class for API errors
 class ApiError extends Error {
   status?: number
-  details?: unknown
+  details?: any
 
-  constructor(message: string, status?: number, details?: unknown) {
+  constructor(message: string, status?: number, details?: any) {
     super(message)
     this.name = "ApiError"
     this.status = status
@@ -38,10 +38,28 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
+// Add token to requests if available
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token")
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 // Response interceptor for global error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      // Clear token and redirect to login if not already there
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        localStorage.removeItem("token")
+        window.location.href = "/login"
+      }
+    }
+
     // Transform axios error into our custom ApiError
     if (error.response) {
       // The request was made and the server responded with a status code
@@ -66,7 +84,7 @@ export interface ApiResponse<T> {
 async function fetchApi<T>(
   endpoint: string,
   method: "get" | "post" | "put" | "delete" | "patch" = "get",
-  data?: unknown,
+  data?: any,
   config?: AxiosRequestConfig,
 ): Promise<T> {
   try {
@@ -133,6 +151,35 @@ export const getStudentEngagement = () => fetchApi<StudentEngagement[]>("/analyt
 export const getModuleEngagement = () => fetchApi<ModuleEngagement[]>("/analytics/modules")
 export const getTimeOfDayActivity = () => fetchApi<TimeOfDayActivity[]>("/analytics/time-of-day")
 
+// Export data
+export const exportStudents = (format = "excel") => {
+  window.open(`${API_BASE_URL}/export/students?format=${format}`, "_blank")
+}
+
+export const exportEvents = (format = "excel", studentId?: string, limit = 1000) => {
+  let url = `${API_BASE_URL}/export/events?format=${format}&limit=${limit}`
+  if (studentId) {
+    url += `&studentId=${studentId}`
+  }
+  window.open(url, "_blank")
+}
+
+export const exportSessions = (format = "excel", studentId?: string) => {
+  let url = `${API_BASE_URL}/export/sessions?format=${format}`
+  if (studentId) {
+    url += `&studentId=${studentId}`
+  }
+  window.open(url, "_blank")
+}
+
+// Authentication
+export const login = (email: string, password: string) =>
+  fetchApi<{ token: string; admin: any }>("/auth/login", "post", { email, password })
+
+export const registerAdmin = (username: string, email: string, password: string) =>
+  fetchApi<{ admin: any }>("/auth/register", "post", { username, email, password })
+
+export const getCurrentAdmin = () => fetchApi<{ admin: any }>("/auth/me")
+
 // Export the custom error class and axios instance for advanced use cases
 export { ApiError, apiClient }
-

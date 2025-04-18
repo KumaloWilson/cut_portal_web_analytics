@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "sonner"
+import { AxiosError } from "axios"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -29,10 +30,15 @@ export default function LoginPage() {
       setIsSubmitting(true)
       await login(email, password)
       toast.success("Login successful")
-    } catch (error: any) {
-      console.error("Login error:", error)
-      toast.error(error.response?.data?.message || "Login failed. Please check your credentials.")
-    } finally {
+    } catch (error: unknown) {
+          console.error("Authentication error:", error)
+          if (error instanceof AxiosError) {
+            toast.error(error.response?.data?.message || "Failed to Login. Please check your credentials")
+          } else {
+            toast.error("Failed to Login. Please check your credentials")
+          }
+          
+        } finally {
       setIsSubmitting(false)
     }
   }

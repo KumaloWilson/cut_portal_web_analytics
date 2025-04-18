@@ -24,9 +24,9 @@ export const SOCKET_BASE_URL = process.env.NEXT_SOCKET_PUBLIC_API_URL || "http:/
 // Custom error class for API errors
 class ApiError extends Error {
   status?: number
-  details?: any
+  details?: unknown
 
-  constructor(message: string, status?: number, details?: any) {
+  constructor(message: string, status?: number, details?: unknown) {
     super(message)
     this.name = "ApiError"
     this.status = status
@@ -85,11 +85,22 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// Define the admin type that was previously using 'any'
+export interface Admin {
+  id: string
+  username: string
+  email: string
+  roles?: string[]
+  permissions?: string[]
+  createdAt?: Date
+  updatedAt?: Date
+}
+
 // Utility function for making API requests
 async function fetchApi<T>(
   endpoint: string,
   method: "get" | "post" | "put" | "delete" | "patch" = "get",
-  data?: any,
+  data?: unknown,
   config?: AxiosRequestConfig,
 ): Promise<T> {
   try {
@@ -179,12 +190,12 @@ export const exportSessions = (format = "excel", studentId?: string) => {
 
 // Authentication
 export const login = (email: string, password: string) =>
-  fetchApi<{ token: string; admin: any }>("/auth/login", "post", { email, password })
+  fetchApi<{ token: string; admin: Admin }>("/auth/login", "post", { email, password })
 
 export const registerAdmin = (username: string, email: string, password: string) =>
-  fetchApi<{ admin: any }>("/auth/register", "post", { username, email, password })
+  fetchApi<{ admin: Admin }>("/auth/register", "post", { username, email, password })
 
-export const getCurrentAdmin = () => fetchApi<{ admin: any }>("/auth/me")
+export const getCurrentAdmin = () => fetchApi<{ admin: Admin }>("/auth/me")
 
 
 

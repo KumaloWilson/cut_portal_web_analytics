@@ -22,6 +22,7 @@ import {
 interface EventsTimelineProps {
   events: EventType[]
   isLoading: boolean
+  onEventClick: (event: EventType) => void
 }
 
 export function EventsTimeline({ events, isLoading }: EventsTimelineProps) {

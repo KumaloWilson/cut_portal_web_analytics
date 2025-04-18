@@ -45,6 +45,8 @@ import { EventsTimeline } from "@/components/events-timeline"
 import { ModuleEngagementList } from "@/components/module-engagement-list"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
+
+
 export default function DashboardPage() {
   const { socket, isConnected } = useSocket()
   const [activeStudents, setActiveStudents] = useState(0)

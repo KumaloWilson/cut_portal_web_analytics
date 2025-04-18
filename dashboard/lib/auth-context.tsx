@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import axios from "axios"
+import { API_BASE_URL } from "./api"
 
 interface Admin {
   id: number
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch current admin data
   const fetchCurrentAdmin = async (authToken: string) => {
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true)
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password,
       })
@@ -101,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`,
+        `${API_BASE_URL}/auth/register`,
         { username, email, password },
         {
           headers: {

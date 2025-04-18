@@ -51,11 +51,16 @@ export default function AnalyticsPage() {
     queryKey: ["eventDistribution"],
     queryFn: fetchEventDistribution,
   })
-
-  const handleExportData = (data, filename) => {
-    const anonymizedData = anonymizeData(data)
-    exportToCSV(anonymizedData, filename)
-  }
+const handleExportData = (data: any[], filename: string) => {
+    // Determine the data type based on the filename
+    const dataType = filename.includes("student") 
+        ? "students" 
+        : filename.includes("event") 
+        ? "events"
+        : "sessions"
+    const anonymizedData = anonymizeData(data, dataType)
+    exportToCSV(anonymizedData, dataType, filename)
+}
 
   return (
     <div className="flex flex-col gap-4">
@@ -63,7 +68,7 @@ export default function AnalyticsPage() {
         <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
         <Button
           variant="outline"
-          onClick={() => handleExportData(analyticsData, "analytics-export")}
+          onClick={() => analyticsData ? handleExportData([analyticsData], "analytics-export") : null}
           disabled={isLoadingAnalytics}
         >
           <FileDown className="mr-2 h-4 w-4" />

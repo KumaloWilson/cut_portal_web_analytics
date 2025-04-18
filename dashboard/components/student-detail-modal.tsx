@@ -109,7 +109,7 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto w-[90vw] max-w-full">
         <DialogHeader>
           <DialogTitle className="text-2xl">Student Profile</DialogTitle>
           <DialogDescription>
@@ -117,7 +117,7 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="space-y-2">
             <div className="text-sm text-muted-foreground">Student ID</div>
             <div className="font-medium">{student.student_id}</div>
@@ -229,7 +229,7 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
                 </CardHeader>
                 <CardContent>
                   {isLoadingSessions ? (
-                    <Skeleton className="h-[200px] w-full" />
+                    <Skeleton className="h-[250px] w-full" />
                   ) : (
                     <LineChart
                       data={sessionData}
@@ -237,7 +237,7 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
                       index="date"
                       colors={["blue"]}
                       valueFormatter={(value) => `${value} min`}
-                      className="h-[200px]"
+                      className="h-[250px]"
                     />
                   )}
                 </CardContent>
@@ -246,59 +246,59 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
           </TabsContent>
 
           <TabsContent value="sessions">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Session History</CardTitle>
-                <Button variant="outline" size="sm" onClick={handleExportSessions}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {isLoadingSessions ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : sessions?.length ? (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                    {sessions.slice(0, 5).map((session: Session) => (
-                      <div key={session.session_id} className="p-3 rounded-md border">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium">{format(parseISO(session.start_time), "MMMM d, yyyy")}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {format(parseISO(session.start_time), "h:mm a")} -
-                              {session.end_time ? format(parseISO(session.end_time), " h:mm a") : " (Active)"}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Session History</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExportSessions}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingSessions ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : sessions?.length ? (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                      {sessions.slice(0, 5).map((session: Session) => (
+                        <div key={session.session_id} className="p-3 rounded-md border">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium">{format(parseISO(session.start_time), "MMMM d, yyyy")}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(parseISO(session.start_time), "h:mm a")} -
+                                {session.end_time ? format(parseISO(session.end_time), " h:mm a") : " (Active)"}
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {session.total_time_spent ? Math.floor(session.total_time_spent / 60) : 0} minutes
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {session.pages_visited || 0} pages visited
+                            <div className="text-right">
+                              <div className="font-medium">
+                                {session.total_time_spent ? Math.floor(session.total_time_spent / 60) : 0} minutes
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {session.pages_visited || 0} pages visited
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {sessions.length > 5 && (
-                      <div className="text-center mt-4">
-                        <Button variant="link" onClick={handleViewFullProfile}>
-                          View all {sessions.length} sessions
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No session history found</div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                      {sessions.length > 5 && (
+                        <div className="text-center mt-4">
+                          <Button variant="link" onClick={handleViewFullProfile}>
+                            View all {sessions.length} sessions
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">No session history found</div>
+                  )}
+                </CardContent>
+              </Card>
 
-            <div className="mt-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Session Analytics</CardTitle>
@@ -323,56 +323,56 @@ export function StudentDetailModal({ student, open, onClose }: StudentDetailModa
           </TabsContent>
 
           <TabsContent value="events">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Event History</CardTitle>
-                <Button variant="outline" size="sm" onClick={handleExportEvents}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {isLoadingEvents ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : events?.length ? (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                    {events.slice(0, 5).map((event: EventType) => (
-                      <div key={event.id} className="p-3 rounded-md border">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium">{event.event_type.replace(/_/g, " ")}</div>
-                            <div className="text-sm text-muted-foreground truncate max-w-[300px]">
-                              {event.page_title || event.path}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Event History</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExportEvents}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingEvents ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : events?.length ? (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                      {events.slice(0, 5).map((event: EventType) => (
+                        <div key={event.id} className="p-3 rounded-md border">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium">{event.event_type.replace(/_/g, " ")}</div>
+                              <div className="text-sm text-muted-foreground truncate max-w-[300px]">
+                                {event.page_title || event.path}
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">{format(parseISO(event.timestamp), "MMM d, yyyy")}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {format(parseISO(event.timestamp), "h:mm:ss a")}
+                            <div className="text-right">
+                              <div className="font-medium">{format(parseISO(event.timestamp), "MMM d, yyyy")}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(parseISO(event.timestamp), "h:mm:ss a")}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {events.length > 5 && (
-                      <div className="text-center mt-4">
-                        <Button variant="link" onClick={handleViewFullProfile}>
-                          View all {events.length} events
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No event history found</div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                      {events.length > 5 && (
+                        <div className="text-center mt-4">
+                          <Button variant="link" onClick={handleViewFullProfile}>
+                            View all {events.length} events
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">No event history found</div>
+                  )}
+                </CardContent>
+              </Card>
 
-            <div className="mt-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Event Type Distribution</CardTitle>

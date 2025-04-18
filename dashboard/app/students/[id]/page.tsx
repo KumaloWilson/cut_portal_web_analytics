@@ -124,9 +124,10 @@ export default function StudentDetailPage() {
               `${student?.first_name} ${student?.surname}`
             )}
           </h1>
-          <p className="text-muted-foreground">
+          {/* Fix: Changed <p> to <div> to avoid nesting <div> inside <p> */}
+          <div className="text-muted-foreground">
             {isLoadingStudent ? <Skeleton className="h-5 w-32 inline-block" /> : `Student ID: ${student?.student_id}`}
-          </p>
+          </div>
         </div>
       </div>
 

@@ -184,5 +184,91 @@ export const registerAdmin = (username: string, email: string, password: string)
 
 export const getCurrentAdmin = () => fetchApi<{ admin: any }>("/auth/me")
 
+
+
+/**
+ * Fetches the analytics overview data
+ * @returns Dashboard overview data including counts and stats
+ */
+export const fetchAnalytics = (): Promise<DashboardOverview> => {
+  return fetchApi<DashboardOverview>("/analytics/overview")
+}
+
+/**
+ * Fetches student engagement metrics
+ * @returns Array of student engagement data
+ */
+export const fetchStudentEngagement = (): Promise<StudentEngagement[]> => {
+  return fetchApi<StudentEngagement[]>("/analytics/engagement")
+}
+
+/**
+ * Fetches module engagement metrics
+ * @returns Array of module engagement data
+ */
+export const fetchModuleEngagement = (): Promise<ModuleEngagement[]> => {
+  return fetchApi<ModuleEngagement[]>("/analytics/modules")
+}
+
+/**
+ * Fetches event distribution by time of day
+ * @returns Time of day activity data
+ */
+export const fetchEventDistribution = (): Promise<TimeOfDayActivity[]> => {
+  return fetchApi<TimeOfDayActivity[]>("/analytics/time-of-day")
+}
+
+/**
+ * Fetches activity data over a specified time period
+ * @param days Number of days to include in the report (default: 30)
+ * @returns Array of activity data points
+ */
+export const fetchActivityOverTime = (days = 30): Promise<ActivityData[]> => {
+  return fetchApi<ActivityData[]>(`/analytics/activity?days=${days}`)
+}
+
+/**
+ * Fetches top visited pages
+ * @param limit Maximum number of pages to return (default: 10)
+ * @returns Array of page analytics
+ */
+export const fetchTopPages = (limit = 10): Promise<PageAnalytics[]> => {
+  return fetchApi<PageAnalytics[]>(`/analytics/pages?limit=${limit}`)
+}
+
+/**
+ * Fetches daily visitor statistics
+ * @returns Daily visitor stats including today, yesterday, and trends
+ */
+export const fetchDailyVisitors = (): Promise<DailyVisitorStats> => {
+  return fetchApi<DailyVisitorStats>("/analytics/daily-visitors")
+}
+
+/**
+ * Exports analytics data to the specified format
+ * @param endpoint The export endpoint
+ * @param format Export format (default: "excel")
+ */
+export const exportAnalyticsData = (endpoint: string, format = "excel") => {
+  window.open(`${API_BASE_URL}/export/${endpoint}?format=${format}`, "_blank")
+}
+
+/**
+ * Utility function for downloading analytics charts as images
+ * @param chartId The ID of the chart element to download
+ * @param filename The name of the file to download
+ */
+export const downloadChartAsImage = (chartId: string, filename: string) => {
+  const canvas = document.getElementById(chartId) as HTMLCanvasElement
+  if (canvas) {
+    const link = document.createElement('a')
+    link.download = `${filename}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
+}
+
+
+
 // Export the custom error class and axios instance for advanced use cases
 export { ApiError, apiClient }

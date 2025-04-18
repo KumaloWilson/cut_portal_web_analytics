@@ -10,7 +10,11 @@ export class SessionService {
       const existingSession = await SessionModel.findById(session.session_id)
       if (existingSession) {
         console.log(`Session ${session.session_id} already exists, updating instead of creating`)
-        return this.updateSession(session)
+        const updatedSession = await this.updateSession(session)
+        if (!updatedSession) {
+          throw new Error(`Failed to update session ${session.session_id}`)
+        }
+        return updatedSession
       }
 
       // If session_id is null or empty, generate a UUID

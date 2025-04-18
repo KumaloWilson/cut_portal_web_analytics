@@ -116,4 +116,3 @@ export function VisitorsOverview({ dailyVisitors, visitorTrend, isLoading, activ
     </Card>
   )
 }
-

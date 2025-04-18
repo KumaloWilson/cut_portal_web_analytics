@@ -17,6 +17,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  TooltipProps,
 } from "recharts"
 import { cn } from "@/lib/utils"
 
@@ -57,13 +58,14 @@ export function ChartContainer({ config, className, children, ...props }: ChartC
     </div>
   )
 }
-
-interface ChartTooltipProps extends React.ComponentProps<typeof Tooltip<number, string>> {
-  content?: React.ComponentProps<typeof Tooltip<number, string>>["content"]
+interface ChartTooltipProps {
+  content?: TooltipProps<string | number | (string | number)[], string>['content'];
+  formatter?: TooltipProps<string | number | (string | number)[], string>['formatter'];
+  [key: string]: unknown;
 }
 
 export function ChartTooltip({ content = <ChartTooltipContent />, ...props }: ChartTooltipProps) {
-  return <Tooltip content={content} {...props} />
+  return <Tooltip<string | number | (string | number)[], string> content={content} {...props} />
 }
 
 interface ChartTooltipContentProps {
@@ -289,4 +291,3 @@ export function PieChart({
     </ResponsiveContainer>
   )
 }
-

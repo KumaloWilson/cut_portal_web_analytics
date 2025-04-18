@@ -5,6 +5,7 @@ import React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { io, type Socket } from "socket.io-client"
 import { toast } from "sonner"
+import {SOCKET_BASE_URL } from '../lib/api';
 
 interface SocketContextType {
   socket: Socket | null
@@ -22,7 +23,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Connect to the WebSocket server
-    const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "https://cutanalyticsapi.onrender.com", {
+    const socketInstance = io(SOCKET_BASE_URL, {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     })
@@ -55,11 +56,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socketInstance.disconnect()
     }
-  }, [toast])
+  })
 
   return <SocketContext.Provider value={{ socket, isConnected }}>{children}</SocketContext.Provider>
 }
 
 export const useSocket = () => useContext(SocketContext)
-
-

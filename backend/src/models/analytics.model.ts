@@ -135,4 +135,3 @@ export class AnalyticsModel {
     return result.rows[0]?.visitor_count || 0
   }
 }
-

@@ -1,9 +1,15 @@
 import { type Event, EventModel } from "../models/event.model"
 import { AnalyticsModel } from "../models/analytics.model"
+import { WebSocketService } from "./websocket.service"
 import { SessionService } from "./session.service"
-import { WebSocketService } from "./socket.service"
 
 export class EventService {
+
+  // Add this method in EventService class
+  static async getEvents(limit = 100, offset = 0): Promise<Event[]> {
+    return EventModel.getEvents(limit, offset)
+  }
+
   static async createEvent(event: Event): Promise<Event> {
     try {
       // Ensure we have a valid session before creating the event
@@ -77,11 +83,6 @@ export class EventService {
     return EventModel.findBySessionId(sessionId)
   }
 
-
-  static async getEvents(): Promise<Event[]> {
-    return EventModel.findEvents()
-  }
-
   static async getEventsByStudentId(studentId: string, limit = 100, offset = 0): Promise<Event[]> {
     return EventModel.findByStudentId(studentId, limit, offset)
   }
@@ -123,5 +124,8 @@ export class EventService {
   static async getEventsByTimeOfDay(): Promise<any[]> {
     return EventModel.getEventsByTimeOfDay()
   }
+  
+  static async getRecentEvents(minutes: number, limit = 100): Promise<Event[]> {
+    return EventModel.getRecentEvents(minutes, limit)
+  }
 }
-

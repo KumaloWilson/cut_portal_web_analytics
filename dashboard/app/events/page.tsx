@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { exportToCSV } from "@/lib/export"
 import {
   Search,
   Activity,
@@ -37,6 +38,8 @@ export default function EventsPage() {
   const [sortBy, setSortBy] = useState<string>("time")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [recentEvents, setRecentEvents] = useState<EventType[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // Fetch events data
   const { data: events, isLoading: isLoadingEvents } = useQuery({
@@ -122,6 +125,25 @@ export default function EventsPage() {
     }
   }
 
+  // Handle event click
+  const handleEventClick = (event: EventType) => {
+    setSelectedEvent(event)
+    setIsDetailModalOpen(true)
+  }
+
+  // Handle export
+  const handleExportEvents = () => {
+    if (events) {
+      exportToCSV(events, 'events', 'events_list')
+    }
+  }
+
+  const handleExportRecentEvents = () => {
+    if (recentEvents) {
+      exportToCSV(recentEvents, 'events', 'recent_events')
+    }
+  }
+
   // Get icon for event type
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -151,6 +173,10 @@ export default function EventsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Events</h1>
           <p className="text-muted-foreground">Track and analyze user interactions</p>
         </div>
+        <Button variant="outline" onClick={handleExportEvents}>
+          <Download className="mr-2 h-4 w-4" />
+          Export All Events
+        </Button>
       </div>
 
       <Tabs defaultValue="recent" className="mb-6">
@@ -166,9 +192,15 @@ export default function EventsPage() {
                   <CardTitle>Recent Events</CardTitle>
                   <CardDescription>Latest user interactions in real-time</CardDescription>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                  <span>Live</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                    <span>Live</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExportRecentEvents}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -213,7 +245,8 @@ export default function EventsPage() {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
+                      className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer"
+                      onClick={() => handleEventClick(event)}
                     >
                       <div className="col-span-2">
                         <div className="flex items-center gap-2">
@@ -340,7 +373,8 @@ export default function EventsPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.02 }}
-                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
+                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer"
+                        onClick={() => handleEventClick(event)}
                       >
                         <div className="col-span-2">
                           <div className="flex items-center gap-2">
@@ -371,8 +405,8 @@ export default function EventsPage() {
                         </div>
                         <div className="col-span-1 text-right">
                           <Button variant="ghost" size="icon">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
+                            <ChevronRight className="h-4" />
+                            </Button>
                         </div>
                       </motion.div>
                     ))}
@@ -381,7 +415,79 @@ export default function EventsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Event Detail Modal */}
+      {isDetailModalOpen && selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  {getEventIcon(selectedEvent.event_type)}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedEvent.event_type.replace(/_/g, " ")}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedEvent.page_title || selectedEvent.path}</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsDetailModalOpen(false)}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </Button>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Timestamp</h4>
+                <p className="text-sm">{format(parseISO(selectedEvent.timestamp), "MMMM d, yyyy h:mm:ss a")}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Session ID</h4>
+                <p className="text-sm font-mono">{selectedEvent.session_id}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Student ID</h4>
+                <p className="text-sm">{selectedEvent.student_id || "Anonymous"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">URL</h4>
+                <p className="text-sm truncate" title={selectedEvent.url}>
+                  {selectedEvent.url}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Path</h4>
+                <p className="text-sm">{selectedEvent.path}</p>
+              </div>
+              {selectedEvent.details && (
+                <div className="col-span-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Details</h4>
+                  <pre className="bg-muted p-3 rounded-md overflow-auto text-xs">
+                    {JSON.stringify(selectedEvent.details, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
-

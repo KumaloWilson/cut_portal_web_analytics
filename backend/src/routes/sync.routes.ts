@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { SyncController } from "../controller/sync.controller"
+import { SyncController } from "../controllers/sync.controller"
 
 const router = Router()
 
@@ -7,4 +7,3 @@ const router = Router()
 router.post("/", SyncController.syncData)
 
 export default router
-

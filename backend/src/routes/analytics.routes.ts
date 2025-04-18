@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { AnalyticsController } from "../controller/analytics.controller"
+import { AnalyticsController } from "../controllers/analytics.controller"
 
 const router = Router()
 
@@ -25,4 +25,3 @@ router.get("/time-of-day", AnalyticsController.getTimeOfDayActivity)
 router.get("/daily-visitors", AnalyticsController.getDailyVisitors)
 
 export default router
-

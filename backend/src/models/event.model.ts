@@ -29,7 +29,8 @@ export class EventModel {
       return result.rows[0]
     } catch (error) {
       // If it's a foreign key violation, we'll handle it at the service level
-      if (typeof error === 'object' && error && 'code' in error && 'constraint' in error && error.code === "23503" && error.constraint === "events_session_id_fkey") {
+      if ((error as { code: string; constraint: string }).code === "23503" && 
+          (error as { code: string; constraint: string }).constraint === "events_session_id_fkey") {
         throw new Error(`Session with ID ${event.session_id} does not exist`)
       }
       console.error(`Error in create for event:`, error)
@@ -53,19 +54,6 @@ export class EventModel {
     }
   }
 
-  static async findEvents(): Promise<Event[]> {
-    try {
-      const result = await pool.query(
-        `SELECT * FROM events`
-      )
-
-      return result.rows
-    } catch (error) {
-      console.error(`Error :`, error)
-      throw error
-    }
-  }
-
   static async findByStudentId(studentId: string, limit = 100, offset = 0): Promise<Event[]> {
     try {
       const result = await pool.query(
@@ -79,6 +67,22 @@ export class EventModel {
       return result.rows
     } catch (error) {
       console.error(`Error in findByStudentId for student_id ${studentId}:`, error)
+      throw error
+    }
+  }
+
+  static async getEvents(limit = 100, offset = 0): Promise<Event[]> {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM events 
+         ORDER BY timestamp DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset],
+      )
+
+      return result.rows
+    } catch (error) {
+      console.error(`Error in getEvents:`, error)
       throw error
     }
   }
@@ -195,4 +199,3 @@ export class EventModel {
     }
   }
 }
-

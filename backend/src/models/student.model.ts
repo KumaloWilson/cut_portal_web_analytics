@@ -68,4 +68,3 @@ export class StudentModel {
     return (result?.rowCount ?? 0) > 0
   }
 }
-

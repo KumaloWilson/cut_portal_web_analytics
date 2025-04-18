@@ -13,6 +13,21 @@ export class EventController {
     }
   }
 
+  // Add this method in EventController class
+static async getEvents(req: Request, res: Response): Promise<void> {
+  try {
+    const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 100
+    const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : 0
+    
+    const events = await EventService.getEvents(limit, offset)
+    res.status(200).json(events)
+  } catch (error) {
+    console.error("Error fetching events:", error)
+    res.status(500).json({ error: "Failed to fetch events" })
+  }
+}
+
+
   static async getEventsBySessionId(req: Request, res: Response): Promise<void> {
     try {
       const { sessionId } = req.params
@@ -23,18 +38,6 @@ export class EventController {
       res.status(500).json({ error: "Failed to fetch events" })
     }
   }
-
-
-  static async getEvents(req: Request, res: Response): Promise<void> {
-    try {
-      const events = await EventService.getEvents()
-      res.status(200).json(events)
-    } catch (error) {
-      console.error("Error fetching events:", error)
-      res.status(500).json({ error: "Failed to fetch events" })
-    }
-  }
-
 
   static async getEventsByStudentId(req: Request, res: Response): Promise<void> {
     try {
@@ -66,5 +69,17 @@ export class EventController {
       res.status(500).json({ error: "Failed to insert events" })
     }
   }
-}
 
+  static async getRecentEvents(req: Request, res: Response): Promise<void> {
+    try {
+      const minutes = req.query.minutes ? Number.parseInt(req.query.minutes as string) : 30
+      const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 100
+      
+      const events = await EventService.getRecentEvents(minutes, limit)
+      res.status(200).json(events)
+    } catch (error) {
+      console.error("Error fetching recent events:", error)
+      res.status(500).json({ error: "Failed to fetch recent events" })
+    }
+  }
+}

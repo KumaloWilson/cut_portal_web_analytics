@@ -49,9 +49,13 @@ export default function RegisterAdminPage() {
       setEmail("")
       setPassword("")
       setConfirmPassword("")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration error:", error)
-      toast.error(error.response?.data?.message || "Registration failed")
+      if (error && typeof error === 'object' && 'response' in error) {
+        toast.error((error.response as any)?.data?.message || "Registration failed")
+      } else {
+        toast.error("Registration failed")
+      }
     } finally {
       setIsSubmitting(false)
     }

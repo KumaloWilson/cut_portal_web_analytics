@@ -65,11 +65,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/events",
       icon: <Activity className="h-5 w-5" />,
     },
-    {
-      title: "Analytics",
-      href: "/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
+    
     {
       title: "Register Admin",
       href: "/admin/register",

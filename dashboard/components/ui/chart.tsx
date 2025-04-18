@@ -58,8 +58,8 @@ export function ChartContainer({ config, className, children, ...props }: ChartC
   )
 }
 
-interface ChartTooltipProps extends React.ComponentProps<typeof Tooltip<number, string>> {
-  content?: React.ComponentProps<typeof Tooltip<number, string>>["content"]
+interface ChartTooltipProps extends React.ComponentProps<typeof Tooltip> {
+  content?: React.ReactNode
 }
 
 export function ChartTooltip({ content = <ChartTooltipContent />, ...props }: ChartTooltipProps) {
@@ -102,7 +102,7 @@ export function ChartTooltipContent({ active, payload, label }: ChartTooltipCont
 }
 
 interface AreaChartProps {
-  data: unknown[]
+  data: any[]
   categories: string[]
   index: string
   colors?: string[]
@@ -159,7 +159,7 @@ export function AreaChart({
 }
 
 interface BarChartProps {
-  data: unknown[]
+  data: any[]
   categories: string[]
   index: string
   colors?: string[]
@@ -202,7 +202,7 @@ export function BarChart({
 }
 
 interface LineChartProps {
-  data: unknown[]
+  data: any[]
   categories: string[]
   index: string
   colors?: string[]
@@ -251,7 +251,7 @@ export function LineChart({
 }
 
 interface PieChartProps {
-  data: unknown[]
+  data: any[]
   category: string
   index: string
   colors?: string[]
@@ -289,4 +289,3 @@ export function PieChart({
     </ResponsiveContainer>
   )
 }
-

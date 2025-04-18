@@ -13,16 +13,6 @@ export interface Session {
 }
 
 export class SessionModel {
-  static async findAll(): Promise<Session | null> {
-    try {
-      const result = await pool.query("SELECT * FROM sessions")
-      return result?.rows && result.rows.length > 0 ? result.rows[0] : null
-    } catch (error) {
-      console.error(`Error`, error)
-      throw error
-    }
-  }
-
   static async findById(sessionId: string): Promise<Session | null> {
     try {
       const result = await pool.query("SELECT * FROM sessions WHERE session_id = $1", [sessionId])
@@ -44,6 +34,21 @@ export class SessionModel {
       return result.rows
     } catch (error) {
       console.error(`Error in findByStudentId for student_id ${studentId}:`, error)
+      throw error
+    }
+  }
+
+  static async getAllSessions(limit = 1000, offset = 0): Promise<Session[]> {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM sessions 
+         ORDER BY start_time DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset],
+      )
+      return result.rows
+    } catch (error) {
+      console.error(`Error in getAllSessions:`, error)
       throw error
     }
   }
@@ -158,4 +163,3 @@ export class SessionModel {
     }
   }
 }
-

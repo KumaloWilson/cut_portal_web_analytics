@@ -33,7 +33,7 @@ export function VisitorsOverview({ dailyVisitors, visitorTrend, isLoading, activ
           <div className="md:col-span-1">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-muted-foreground text-sm">Today`s Visitors</div>
+                <div className="text-muted-foreground text-sm">Today's Visitors</div>
                 <div className="flex items-center text-xs">
                   <Calendar className="mr-1 h-3 w-3" />
                   Today
@@ -116,4 +116,3 @@ export function VisitorsOverview({ dailyVisitors, visitorTrend, isLoading, activ
     </Card>
   )
 }
-

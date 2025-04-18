@@ -10,14 +10,17 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, Filter, ArrowUpDown, ChevronRight } from "lucide-react"
-import Link from "next/link"
-import { Student, StudentEngagement } from "@/types"
+import { StudentDetailModal } from "@/components/student-detail-modal"
+import { exportToCSV } from "@/lib/export"
+import { Search, Filter, ArrowUpDown, ChevronRight, Download } from "lucide-react"
+import type { Student, StudentEngagement } from "@/types"
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<string>("name")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // Fetch students data
   const { data: students, isLoading: isLoadingStudents } = useQuery({
@@ -49,7 +52,7 @@ export default function StudentsPage() {
     )
   })
 
-  const sortedStudents = filteredStudents?.sort((a : Student, b : Student) => {
+  const sortedStudents = filteredStudents?.sort((a: Student, b: Student) => {
     if (sortBy === "name") {
       const nameA = `${a.first_name} ${a.surname}`.toLowerCase()
       const nameB = `${b.first_name} ${b.surname}`.toLowerCase()
@@ -74,6 +77,25 @@ export default function StudentsPage() {
     }
   }
 
+  // Handle student click
+  const handleStudentClick = (student: Student) => {
+    setSelectedStudent(student)
+    setIsDetailModalOpen(true)
+  }
+
+  // Handle export
+  const handleExportStudents = () => {
+    if (students) {
+      exportToCSV(students, "students", "students_list")
+    }
+  }
+
+  const handleExportEngagement = () => {
+    if (studentEngagement) {
+      exportToCSV(studentEngagement, "students", "student_engagement")
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
@@ -81,6 +103,10 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Students</h1>
           <p className="text-muted-foreground">Manage and analyze student data</p>
         </div>
+        <Button variant="outline" onClick={handleExportStudents}>
+          <Download className="mr-2 h-4 w-4" />
+          Export Data
+        </Button>
       </div>
 
       <Tabs defaultValue="list" className="mb-6">
@@ -163,7 +189,8 @@ export default function StudentsPage() {
                         key={student.student_id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
+                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer"
+                        onClick={() => handleStudentClick(student)}
                       >
                         <div className="col-span-5 flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -182,11 +209,9 @@ export default function StudentsPage() {
                         <div className="col-span-2 text-sm">{student.student_id}</div>
                         <div className="col-span-4 text-sm">{student.programme_name}</div>
                         <div className="col-span-1 text-right">
-                          <Link href={`/students/${student.student_id}`}>
-                            <Button variant="ghost" size="icon">
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                          <Button variant="ghost" size="icon">
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
                         </div>
                       </motion.div>
                     ))}
@@ -196,9 +221,15 @@ export default function StudentsPage() {
         </TabsContent>
         <TabsContent value="engagement" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Student Engagement</CardTitle>
-              <CardDescription>Analyze student activity and engagement metrics</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Student Engagement</CardTitle>
+                <CardDescription>Analyze student activity and engagement metrics</CardDescription>
+              </div>
+              <Button variant="outline" onClick={handleExportEngagement}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Data
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -239,7 +270,13 @@ export default function StudentsPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.05 }}
-                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50"
+                        className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer"
+                        onClick={() => {
+                          const fullStudent = students?.find((s) => s.student_id === student.student_id)
+                          if (fullStudent) {
+                            handleStudentClick(fullStudent)
+                          }
+                        }}
                       >
                         <div className="col-span-4 flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -286,7 +323,13 @@ export default function StudentsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Student Detail Modal */}
+      <StudentDetailModal
+        student={selectedStudent}
+        open={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+      />
     </DashboardLayout>
   )
 }
-

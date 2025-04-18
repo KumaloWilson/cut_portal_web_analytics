@@ -4,7 +4,7 @@ import dotenv from "dotenv"
 import http from "http"
 import { initializeDatabase } from "./models/database"
 import routes from "./routes"
-import { WebSocketService } from "./services/socket.service"
+import { WebSocketService } from "./services/websocket.service"
 
 // Load environment variables
 dotenv.config()
@@ -20,14 +20,7 @@ const server = http.createServer(app)
 WebSocketService.initialize(server)
 
 // Middleware
-app.use(
-  cors({
-    origin: "*", // Allow specific origins or all (*)
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Specify allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
-    credentials: true, // Allow cookies if needed
-  })
-)
+app.use(cors())
 app.use(express.json())
 
 // Initialize database

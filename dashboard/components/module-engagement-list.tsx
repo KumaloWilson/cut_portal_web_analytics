@@ -4,10 +4,12 @@ import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ModuleEngagement } from "@/types"
 import { BookOpen } from "lucide-react"
+import { Student } from '../types/index';
 
 interface ModuleEngagementListProps {
   modules: ModuleEngagement[]
   isLoading: boolean
+  onStudentClick: (student: Student) => void
 }
 
 export function ModuleEngagementList({ modules, isLoading }: ModuleEngagementListProps) {
@@ -68,4 +70,3 @@ export function ModuleEngagementList({ modules, isLoading }: ModuleEngagementLis
     </div>
   )
 }
-

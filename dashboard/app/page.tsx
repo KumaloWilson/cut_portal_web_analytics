@@ -14,12 +14,18 @@ import {
   getModuleEngagement,
   getTimeOfDayActivity,
   getRecentEvents,
+  exportStudents,
+  exportEvents,
+  exportSessions,
 } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AreaChart, BarChart, PieChart, LineChart } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { StudentDetailModal } from "@/components/student-detail-modal"
+import { EventDetailModal } from "@/components/event-detail-modal"
 import {
   Users,
   Clock,
@@ -29,11 +35,17 @@ import {
   ArrowDownRight,
   CalendarDays,
   TrendingUp,
+  Download,
+  FileDown,
+  Activity,
 } from "lucide-react"
-import type { ActivityData, EventType } from "@/types"
-import { EventsTimeline } from "@/components/events-timeline"
-import { ModuleEngagementList } from "@/components/module-engagement"
+import type { ActivityData, EventType, Student } from "@/types"
 import { VisitorsOverview } from "@/components/visitors-overview"
+import { EventsTimeline } from "@/components/events-timeline"
+import { ModuleEngagementList } from "@/components/module-engagement-list"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+
 
 export default function DashboardPage() {
   const { socket, isConnected } = useSocket()
@@ -41,6 +53,10 @@ export default function DashboardPage() {
   const [recentEvents, setRecentEvents] = useState<EventType[]>([])
   const [dailyVisitors, setDailyVisitors] = useState(0)
   const [visitorTrend, setVisitorTrend] = useState(0)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null)
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
 
   // Fetch dashboard overview data
   const { data: overview, isLoading: isLoadingOverview } = useQuery({
@@ -207,9 +223,21 @@ export default function DashboardPage() {
     interactions: 0,
   }
 
-  // const sessionsChange = calculateChange(today.sessions, yesterday.sessions)
+  const sessionsChange = calculateChange(today.sessions, yesterday.sessions)
   const pageViewsChange = calculateChange(today.pageViews, yesterday.pageViews)
   const interactionsChange = calculateChange(today.interactions, yesterday.interactions)
+
+  // Handle student click
+  const handleStudentClick = (student: Student) => {
+    setSelectedStudent(student)
+    setIsStudentModalOpen(true)
+  }
+
+  // Handle event click
+  const handleEventClick = (event: EventType) => {
+    setSelectedEvent(event)
+    setIsEventModalOpen(true)
+  }
 
   // Animations
   const fadeIn = {
@@ -220,6 +248,12 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
+      <StudentDetailModal
+        student={selectedStudent}
+        open={isStudentModalOpen}
+        onClose={() => setIsStudentModalOpen(false)}
+      />
+      <EventDetailModal event={selectedEvent} open={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} />
       <motion.div
         className="flex items-center justify-between mb-6"
         initial={{ opacity: 0, y: -20 }}
@@ -231,6 +265,29 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Real-time analytics for CUT eLearning platform</p>
         </div>
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Data
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportStudents()}>
+                <Users className="mr-2 h-4 w-4" />
+                Export Students
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportEvents()}>
+                <Activity className="mr-2 h-4 w-4" />
+                Export Events
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportSessions()}>
+                <Clock className="mr-2 h-4 w-4" />
+                Export Sessions
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {isConnected && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
               <span className="h-2 w-2 rounded-full bg-green-500"></span>
@@ -381,9 +438,15 @@ export default function DashboardPage() {
         <TabsContent value="activity" className="mt-4">
           <motion.div {...fadeIn} transition={{ duration: 0.6 }}>
             <Card>
-              <CardHeader>
-                <CardTitle>Activity Overview</CardTitle>
-                <CardDescription>Sessions, page views, and interactions over the last 30 days</CardDescription>
+              <CardHeader className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Activity Overview</CardTitle>
+                  <CardDescription>Sessions, page views, and interactions over the last 30 days</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => exportEvents("excel")}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
               </CardHeader>
               <CardContent>
                 {isLoadingActivity ? (
@@ -491,7 +554,12 @@ export default function DashboardPage() {
               </Badge>
             </CardHeader>
             <CardContent>
-              <EventsTimeline events={recentEvents} isLoading={isLoadingEvents} />
+              <EventsTimeline events={recentEvents} isLoading={isLoadingEvents} onEventClick={handleEventClick} />
+              <div className="mt-4 text-center">
+                <Button variant="link" onClick={() => (window.location.href = "/events")}>
+                  View more events
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -503,7 +571,16 @@ export default function DashboardPage() {
               <CardDescription>Most active modules by student engagement</CardDescription>
             </CardHeader>
             <CardContent>
-              <ModuleEngagementList modules={moduleEngagement || []} isLoading={isLoadingModuleEngagement} />
+              <ModuleEngagementList
+                modules={moduleEngagement || []}
+                isLoading={isLoadingModuleEngagement}
+                onStudentClick={handleStudentClick}
+              />
+              <div className="mt-4 text-center">
+                <Button variant="link" onClick={() => (window.location.href = "/modules")}>
+                  View all modules
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -511,4 +588,3 @@ export default function DashboardPage() {
     </DashboardLayout>
   )
 }
-

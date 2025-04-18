@@ -110,4 +110,3 @@ export interface RealtimeUpdate<T> {
   data: T
   timestamp: string
 }
-

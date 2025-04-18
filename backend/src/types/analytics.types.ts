@@ -42,4 +42,3 @@ export interface AnalyticsData {
   current_session: SessionData
   events: TrackingEvent[]
 }
-

@@ -1,6 +1,6 @@
 import { type Student, StudentModel } from "../models/student.model"
 import { ModuleModel } from "../models/module.model"
-import { WebSocketService } from "./socket.service"
+import { WebSocketService } from "./websocket.service"
 
 export class StudentService {
   static async getStudentById(studentId: string): Promise<Student | null> {
@@ -88,4 +88,3 @@ export class StudentService {
     }
   }
 }
-

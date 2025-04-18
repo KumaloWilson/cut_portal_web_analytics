@@ -5,14 +5,14 @@ dotenv.config()
 
 // Create database pool
 export const pool = new Pool({
-    user: process.env.POSTGRES_USER || "postgres",
-    host: process.env.POSTGRES_HOST || "localhost",
-    database: process.env.POSTGRES_DB || "cut_analytics",
-    password: process.env.POSTGRES_PASSWORD || "postgres",
-    port: Number.parseInt(process.env.POSTGRES_PORT || "5432"),
-    max: 20, // Maximum number of clients in the pool
-    idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-    connectionTimeoutMillis: 9000, // How long to wait for a connection to become available
+  user: process.env.POSTGRES_USER || "postgres",
+  host: process.env.POSTGRES_HOST || "localhost",
+  database: process.env.POSTGRES_DB || "cut_analytics",
+  password: process.env.POSTGRES_PASSWORD || "postgres",
+  port: Number.parseInt(process.env.POSTGRES_PORT || "5432"),
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
+  connectionTimeoutMillis: 9000, // How long to wait for a connection to become available
 })
 
 export async function initializeDatabase(): Promise<void> {
@@ -121,6 +121,18 @@ export async function initializeDatabase(): Promise<void> {
       )
     `)
 
+    // Create admins table for authentication
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
     await client.query("COMMIT")
   } catch (e) {
     await client.query("ROLLBACK")
@@ -129,4 +141,3 @@ export async function initializeDatabase(): Promise<void> {
     client.release()
   }
 }
-

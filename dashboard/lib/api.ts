@@ -14,9 +14,9 @@ import type {
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type AxiosError } from "axios"
 
 // Base URL configuration
-export const API_BASE_URL = "https://cutanalytics.onrender.com/api"
+export const API_BASE_URL = "https://cutanalyticsapi.onrender.com/api"
 
-export const SOCKET_BASE_URL = "https://cutanalytics.onrender.com"
+export const SOCKET_BASE_URL = "https://cutanalyticsapi.onrender.com"
 
 
 // export const API_BASE_URL =  "http://localhost:5000/api"
